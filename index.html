@@ -43,6 +43,18 @@
     background:linear-gradient(90deg,rgba(255,84,112,.35),rgba(107,119,147,.25) 50%,rgba(39,208,122,.35))}
   .fcmark{position:absolute;top:-3px;width:3px;height:18px;background:var(--txt);border-radius:2px}
   .fcends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+  .fcrow{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  .fcproj{font-size:13px;color:var(--muted)} .fcproj b.pos{color:var(--green)} .fcproj b.neg{color:var(--red)}
+  .fcchartlabel{font-size:10px;color:var(--muted);margin-top:6px}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .oracle{font-size:12px;color:#b48bff;font-weight:600}
+
+  .diag{margin:0 24px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .dbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .dlabel{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .dval{font-size:24px;font-weight:800;margin:6px 0 4px}
+  .dsub{font-size:11px;color:var(--muted);line-height:1.5}
+  .dmuted{color:var(--muted);font-weight:400;font-size:11px}
 
   .consensus{display:flex;gap:18px;flex-wrap:wrap;align-items:center;
     padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -145,6 +157,8 @@
 </div>
 
 <div class="forecast none" id="forecast" style="display:none"></div>
+
+<div class="diag" id="diag" style="display:none"></div>
 
 <div class="consensus" id="consensus" style="display:none">
   <div class="cbadge">Consensus <span class="bias" id="bias">—</span></div>
@@ -467,10 +481,14 @@ function card(r,H){
   const dir=dirOf(r.score),dlc=dir.toLowerCase();
   const pc=r.score>8?"pos":r.score<-8?"neg":"zero";
   const arrow=dir==="LONG"?"▲":dir==="SHORT"?"▼":"■";const sign=r.score>0?"+":"";
+  let oracle="";
+  if(bt.n>=8){const cei=Math.max(bt.hitRate,1-bt.hitRate)*100,tag=bt.hitRate>=0.5?"follow":"fade";
+    oracle=`<div class="row"><span class="k" title="Best achievable only with hindsight — unattainable live">Oracle ceiling</span><span class="oracle">${cei.toFixed(0)}% · ${tag}</span></div>`;}
   return `<div class="card ${dlc}">
     <h3>${r.name}</h3><div class="author">by ${r.author}</div>
     <div class="row"><span class="k">Hit-rate</span>
       <span class="light"><span class="dot ${lt.cls}"></span><span class="conf-txt">${lt.txt}</span></span></div>
+    ${oracle}
     <div class="row"><span class="k">Prediction</span><span class="pred ${pc}">${sign}${r.score}</span></div>
     <div class="row"><span class="raw">${r.raw}</span><span class="dir ${dlc}">${arrow} ${dir}</span></div>
   </div>`;
@@ -494,7 +512,82 @@ function computeForecast(results,C,H){
   if(!wSum) return {ok:false,total:results.length,voters:0};
   return {ok:true,pUp:pUpW/wSum,voters,up,down,total:results.length};
 }
-function renderForecast(fc,H){
+// ---- FORWARD PROJECTION (genuine forecast, calibrated on edge-weighted conditional returns) ----
+function logret1(C){const o=[null];for(let i=1;i<C.length;i++)o.push(Math.log(C[i]/C[i-1]));return o;}
+function condReturn(sig,C,H){ // avg forward H-bar log return at past bars sharing the current signal state
+  const cur=last(sig); if(!cur) return null; let sum=0,cnt=0;
+  for(let i=0;i<C.length-H;i++){ if(sig[i]===cur){ sum+=Math.log(C[i+H]/C[i]); cnt++; } }
+  return cnt>=8 ? sum/cnt : null;
+}
+function projectPath(results,C,H){
+  let muW=0,wSum=0;
+  for(const r of results){const cur=last(r.signals);if(!cur)continue;
+    const bt=backtest(r.signals,C,H);if(!bt.n||bt.n<8||bt.hitRate<=0.5)continue;
+    const cr=condReturn(r.signals,C,H);if(cr==null)continue;
+    const w=bt.hitRate-0.5; muW+=w*cr; wSum+=w;}
+  const muH = wSum? muW/wSum : 0, drift = muH/H;
+  const lr=logret1(C).filter(x=>x!=null).slice(-200);
+  const mean=lr.reduce((a,b)=>a+b,0)/lr.length;
+  const sigma=Math.sqrt(lr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/lr.length);
+  const now=last(C),center=[],up1=[],lo1=[],up2=[],lo2=[];
+  for(let k=0;k<=H;k++){const c=now*Math.exp(drift*k);center.push(c);
+    up1.push(c*Math.exp(sigma*Math.sqrt(k)));lo1.push(c*Math.exp(-sigma*Math.sqrt(k)));
+    up2.push(c*Math.exp(2*sigma*Math.sqrt(k)));lo2.push(c*Math.exp(-2*sigma*Math.sqrt(k)));}
+  return {center,up1,lo1,up2,lo2,muH,sigma,hasEdge:wSum>0};
+}
+function projChart(C,proj,H,up){
+  const histN=50,hist=C.slice(-histN),np=hist.length+H;
+  const ys=[...hist,...proj.up2,...proj.lo2],ymin=Math.min(...ys),ymax=Math.max(...ys),rng=(ymax-ymin)||1;
+  const W=900,Ht=170,pad=6;
+  const X=i=>pad+i*(W-2*pad)/(np-1), Y=v=>Ht-pad-((v-ymin)/rng)*(Ht-2*pad);
+  const col=up?"#27d07a":"#ff5470";
+  const hp=hist.map((v,i)=>X(i)+","+Y(v)).join(" ");
+  const cx=k=>X(hist.length-1+k);
+  const band=(u,l)=>{let p="M";for(let k=0;k<=H;k++)p+=cx(k)+","+Y(u[k])+" L";for(let k=H;k>=0;k--)p+=cx(k)+","+Y(l[k])+" L";return p.slice(0,-2)+"Z";};
+  const cpath=proj.center.map((v,k)=>cx(k)+","+Y(v)).join(" ");
+  const divX=X(hist.length-1);
+  return `<svg viewBox="0 0 ${W} ${Ht}" preserveAspectRatio="none" style="width:100%;height:170px;display:block">
+    <path d="${band(proj.up2,proj.lo2)}" fill="${col}" opacity="0.10"/>
+    <path d="${band(proj.up1,proj.lo1)}" fill="${col}" opacity="0.18"/>
+    <line x1="${divX}" y1="${pad}" x2="${divX}" y2="${Ht-pad}" stroke="#3a4663" stroke-dasharray="3 3"/>
+    <polyline points="${hp}" fill="none" stroke="#c8d2e6" stroke-width="1.6"/>
+    <polyline points="${cpath}" fill="none" stroke="${col}" stroke-width="1.8" stroke-dasharray="5 4"/>
+  </svg>`;
+}
+
+// ---- PERFECT-FORESIGHT BENCHMARK (theoretical ceiling, unattainable live) ----
+function perfectForesight(results,C,H){
+  let oracle=0,ens=0;const start=60;
+  for(let i=start;i<C.length-H;i+=H){const r=Math.log(C[i+H]/C[i]);oracle+=Math.abs(r);
+    let vote=0;for(const res of results)vote+=res.signals[i]||0;ens+=sgn(vote)*r;}
+  return {oracleMult:Math.exp(oracle), ensMult:Math.exp(ens), capture: oracle? ens/oracle:0};
+}
+
+// ---- WALK-FORWARD VALIDATION (calibrate on 70%, score out-of-sample on 30%) ----
+function walkForward(results,C,H){
+  const n=C.length,split=Math.floor(n*0.7);
+  const cal=results.map(r=>{const bt=backtest(r.signals.slice(0,split),C.slice(0,split),H);
+    if(!bt.n||bt.n<8)return {w:0,mult:0};return {w:Math.abs(bt.hitRate-0.5),mult:bt.hitRate>=0.5?1:-1};});
+  function score(a,b){let hit=0,tot=0;for(let i=a;i<b;i+=H){let vote=0;
+    results.forEach((r,j)=>{vote+=cal[j].w*cal[j].mult*(r.signals[i]||0);});
+    if(vote===0)continue;const real=sgn(C[i+H]-C[i]);if(real===0)continue;tot++;if(sgn(vote)===real)hit++;}
+    return {rate:tot?hit/tot:null,n:tot};}
+  const ins=score(60,split-H), oos=score(split,n-H);
+  return {ins:ins.rate,nIns:ins.n,oos:oos.rate,nOos:oos.n,split};
+}
+
+// ---- NO-LOOK-AHEAD SELF-TEST (signals must not change when future bars are removed) ----
+function selfTest(O,Hh,L,C,V){
+  const n=C.length,cut=n-30;
+  const full=INDICATORS.map(fn=>{try{return fn(O,Hh,L,C,V).signals[cut];}catch(e){return "ERR";}});
+  const sl=a=>a.slice(0,cut+1);
+  const trunc=INDICATORS.map(fn=>{try{const s=fn(sl(O),sl(Hh),sl(L),sl(C),sl(V)).signals;return s[s.length-1];}catch(e){return "ERR";}});
+  let pass=0;const fails=[];
+  for(let i=0;i<INDICATORS.length;i++){if(full[i]===trunc[i])pass++;else fails.push((META[i]||["?"])[0]);}
+  return {pass,total:INDICATORS.length,fails,cut};
+}
+
+function renderForecast(fc,results,C,H){
   const el=document.getElementById("forecast"); el.style.display="flex";
   if(!fc.ok){
     el.className="forecast none";
@@ -504,21 +597,47 @@ function renderForecast(fc,H){
     return;
   }
   const up=fc.pUp>=0.5, prob=(up?fc.pUp:1-fc.pUp)*100, cls=up?"long":"short";
+  const proj=projectPath(results,C,H), movePct=(Math.exp(proj.muH)-1)*100;
   el.className="forecast "+cls;
   el.innerHTML=`<div class="fclabel">Ensemble forecast · next ${H} bars</div>
-    <div class="fcdir ${cls}">${up?"▲":"▼"} ${up?"UP":"DOWN"} ${prob.toFixed(0)}%</div>
-    <div>
-      <div class="fcbar"><div class="fcmark" style="left:calc(${(fc.pUp*100).toFixed(1)}% - 1.5px)"></div></div>
-      <div class="fcends"><span>DOWN</span><span>50/50</span><span>UP</span></div>
+    <div class="fcrow">
+      <div class="fcdir ${cls}">${up?"▲":"▼"} ${up?"UP":"DOWN"} ${prob.toFixed(0)}%</div>
+      <div class="fcproj">projected move <b class="${movePct>=0?'pos':'neg'}">${movePct>=0?"+":""}${movePct.toFixed(2)}%</b> · ±${((Math.exp(proj.sigma*Math.sqrt(H))-1)*100).toFixed(1)}% (1σ)</div>
     </div>
-    <div class="fcsub">${fc.voters} of ${fc.total} indicators have a demonstrated edge and vote (${fc.up} lean up · ${fc.down} lean down). Probability is hit-rate-weighted across those voters and assumes their past directional accuracy persists — it is a model estimate, not a guarantee. Single-symbol, direction-only, no fees. Not financial advice.</div>`;
+    <div class="fcbar"><div class="fcmark" style="left:calc(${(fc.pUp*100).toFixed(1)}% - 1.5px)"></div></div>
+    <div class="fcends"><span>DOWN</span><span>50/50</span><span>UP</span></div>
+    <div class="fcchartlabel">Forward projection — solid = last 50 bars · dashed = predicted path · shaded = 1σ / 2σ cone</div>
+    ${projChart(C,proj,H,up)}
+    <div class="fcsub">${fc.voters} of ${fc.total} indicators have a demonstrated edge and vote (${fc.up} lean up · ${fc.down} lean down). Probability is hit-rate-weighted; the projected path extrapolates each voter's edge-weighted historical conditional return, with a volatility cone. A model estimate, not a guarantee. Not financial advice.</div>`;
 }
 
-let LASTRESULTS=null,LASTC=null;
+// Renders the perfect-foresight benchmark, walk-forward validation, and self-test row.
+function renderDiagnostics(results,data,H){
+  const C=data.C;
+  const pf=perfectForesight(results,C,H), wf=walkForward(results,C,H), st=LASTSELFTEST||selfTest(data.O,data.H,data.L,data.C,data.V);
+  const cap=(pf.capture*100);
+  const wfTxt = wf.oos==null ? "—" : (wf.oos*100).toFixed(0)+"% <span class='dmuted'>(n="+wf.nOos+", in-sample "+(wf.ins!=null?(wf.ins*100).toFixed(0)+"%":"—")+")</span>";
+  const stCls = st.fails.length? "red":"green";
+  const stTxt = st.fails.length? (st.pass+"/"+st.total+" — repaint: "+st.fails.join(", ")) : (st.pass+"/"+st.total+" causal ✓");
+  document.getElementById("diag").style.display="grid";
+  document.getElementById("diag").innerHTML=`
+    <div class="dbox"><div class="dlabel">Perfect-foresight benchmark <span class="dmuted">(ceiling, unattainable)</span></div>
+      <div class="dval ${cap>=0?'pos':'neg'}">${cap>=0?"":"−"}${Math.abs(cap).toFixed(0)}%</div>
+      <div class="dsub">of perfect foresight captured. A perfect oracle (always right each ${H} bars) ≈ <b>${pf.oracleMult.toFixed(1)}×</b> over this window; the equal-weight causal ensemble ≈ <b class="${pf.ensMult>=1?'pos':'neg'}">${pf.ensMult.toFixed(2)}×</b>. Near 0% (or negative) means little real directional edge.</div></div>
+    <div class="dbox"><div class="dlabel">Walk-forward (out-of-sample)</div>
+      <div class="dval">${wfTxt}</div>
+      <div class="dsub">Weights & follow/fade calibrated on the oldest 70% of bars, scored on the held-out most-recent 30% the model never saw. 50% = coin-flip.</div></div>
+    <div class="dbox"><div class="dlabel">No-look-ahead self-test</div>
+      <div class="dval"><span class="dot ${stCls}" style="width:13px;height:13px;display:inline-block;vertical-align:middle"></span> ${st.pass}/${st.total}</div>
+      <div class="dsub">${stTxt}. Every indicator recomputed with the last 30 bars deleted; signal at bar ${st.cut} must be unchanged. Proves the signals don't peek ahead.</div></div>`;
+}
+
+let LASTRESULTS=null,LASTDATA=null,LASTSELFTEST=null;
 function renderAll(){
   if(!LASTRESULTS)return;
-  const H=+document.getElementById("horizon").value;
-  renderForecast(computeForecast(LASTRESULTS,LASTRESULTS[0]._C,H),H);
+  const H=+document.getElementById("horizon").value, C=LASTDATA.C;
+  renderForecast(computeForecast(LASTRESULTS,C,H),LASTRESULTS,C,H);
+  renderDiagnostics(LASTRESULTS,LASTDATA,H);
   const tiers=activeTiers();const cont=document.getElementById("sections");cont.innerHTML="";
   const names={S:"Tier S — the icons",A:"Tier A — heavy hitters",B:"Tier B — widely-used standards"};
   let nL=0,nS=0,nN=0,sum=0,hitSum=0,hitN=0;
@@ -557,6 +676,8 @@ async function run(){
       if(!Number.isFinite(r.score)) r.score=0;
       r._C=C; return r;
     });
+    LASTDATA={O,H,L,C,V};
+    LASTSELFTEST=selfTest(O,H,L,C,V);   // computed once per load (horizon-independent)
     renderAll();
     document.getElementById("price").textContent=sym.replace("USDT","")+" $"+last(C).toLocaleString();
     document.getElementById("updated").textContent="updated "+new Date().toLocaleTimeString()+" · "+k.length+" bars";
