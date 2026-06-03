@@ -48,6 +48,8 @@
   .fcchartlabel{font-size:10px;color:var(--muted);margin-top:6px}
   .pos{color:var(--green)} .neg{color:var(--red)}
   .oracle{font-size:12px;color:#b48bff;font-weight:600}
+  .sparkwrap{margin-top:11px;border-top:1px solid var(--line);padding-top:11px}
+  .spark{width:100%;height:40px;display:block}
 
   .diag{margin:0 24px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
   .dbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
@@ -176,6 +178,7 @@
   <strong>How to read this</strong><br>
   <b>Prediction number</b> = a normalized signal score from −100 (strong short) to +100 (strong long), from each indicator's own math on the latest live bar — not a price target.
   <b>Direction</b> = the indicator's current call.
+  <b>Sparkline</b> = the last 60 bars of price, coloured by that indicator's own signal at each bar (🟩 long · 🟥 short · ◾ neutral) — so you can see how its calls lined up with price.
   <b>Traffic light = backtested hit-rate</b>: each indicator's causal (no-lookahead) signals are replayed across ~1000 historical bars; on every signal flip we check whether price moved in the signalled direction over the next N bars (your horizon). The light shows that hit-rate (🟢 ≥55% / 🟡 48–54% / 🔴 &lt;48% / ⚫ &lt;8 trades). 50% is the directional coin-flip baseline.<br><br>
   <strong>Honest caveats.</strong> This is a single-symbol, single-parameter, direction-only backtest with overlapping forward windows and no fees/slippage — it indicates relative reliability, <em>not</em> tradeable expectancy. Most popular indicators sit near 50%; that's the real, sobering result. Popularity ≠ profitability. <strong>Not financial advice.</strong> Data: Binance public market API.
 </footer>
@@ -491,6 +494,7 @@ function card(r,H){
     ${oracle}
     <div class="row"><span class="k">Prediction</span><span class="pred ${pc}">${sign}${r.score}</span></div>
     <div class="row"><span class="raw">${r.raw}</span><span class="dir ${dlc}">${arrow} ${dir}</span></div>
+    <div class="sparkwrap" title="Last 60 bars of price, coloured by this indicator's signal — green=long, red=short, grey=neutral">${sparkline(r._C,r.signals,60)}</div>
   </div>`;
 }
 
@@ -553,6 +557,21 @@ function projChart(C,proj,H,up){
     <polyline points="${hp}" fill="none" stroke="#c8d2e6" stroke-width="1.6"/>
     <polyline points="${cpath}" fill="none" stroke="${col}" stroke-width="1.8" stroke-dasharray="5 4"/>
   </svg>`;
+}
+
+// ---- PER-CARD SPARKLINE (price line coloured by that indicator's signal) ----
+function sparkline(C,signals,n){
+  const hist=C.slice(-n),sig=signals.slice(-n);
+  if(hist.length<2) return "";
+  const min=Math.min(...hist),max=Math.max(...hist),rng=(max-min)||1;
+  const W=300,Ht=40,pad=3;
+  const X=i=>(pad+i*(W-2*pad)/(hist.length-1)).toFixed(1), Y=v=>(Ht-pad-((v-min)/rng)*(Ht-2*pad)).toFixed(1);
+  const paths={"1":"","-1":"","0":""};
+  for(let i=1;i<hist.length;i++){const s=String(sig[i]||0);
+    paths[s]+=`M${X(i-1)},${Y(hist[i-1])} L${X(i)},${Y(hist[i])} `;}
+  const col={"1":"#27d07a","-1":"#ff5470","0":"#6b7793"};
+  let out="";for(const k of ["0","-1","1"]) if(paths[k]) out+=`<path d="${paths[k]}" fill="none" stroke="${col[k]}" stroke-width="1.4"/>`;
+  return `<svg viewBox="0 0 ${W} ${Ht}" preserveAspectRatio="none" class="spark">${out}</svg>`;
 }
 
 // ---- PERFECT-FORESIGHT BENCHMARK (theoretical ceiling, unattainable live) ----
