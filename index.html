@@ -30,6 +30,20 @@
     border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
   .tiers label{cursor:pointer}
 
+  .forecast{margin:16px 24px;padding:16px 20px;border-radius:14px;border:1px solid var(--line);
+    background:var(--panel);display:flex;flex-direction:column;gap:12px}
+  .forecast.long{border-color:rgba(39,208,122,.5);box-shadow:0 0 24px rgba(39,208,122,.12) inset}
+  .forecast.short{border-color:rgba(255,84,112,.5);box-shadow:0 0 24px rgba(255,84,112,.12) inset}
+  .forecast.none{border-color:var(--line)}
+  .fclabel{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .fcdir{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .fcdir.long{color:var(--green)} .fcdir.short{color:var(--red)} .fcdir.neutral{color:var(--neutral)}
+  .fcsub{font-size:12px;color:var(--muted);line-height:1.5;max-width:820px}
+  .fcbar{position:relative;height:12px;border-radius:8px;overflow:hidden;
+    background:linear-gradient(90deg,rgba(255,84,112,.35),rgba(107,119,147,.25) 50%,rgba(39,208,122,.35))}
+  .fcmark{position:absolute;top:-3px;width:3px;height:18px;background:var(--txt);border-radius:2px}
+  .fcends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+
   .consensus{display:flex;gap:18px;flex-wrap:wrap;align-items:center;
     padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
   .cbadge{font-size:13px;color:var(--muted)}
@@ -130,6 +144,8 @@
   <span style="margin-left:auto">🟢 ≥55% &nbsp; 🟡 48–54% &nbsp; 🔴 &lt;48% &nbsp; ⚫ &lt;8 trades</span>
 </div>
 
+<div class="forecast none" id="forecast" style="display:none"></div>
+
 <div class="consensus" id="consensus" style="display:none">
   <div class="cbadge">Consensus <span class="bias" id="bias">—</span></div>
   <div class="cbadge"><b id="nLong">0</b> long</div>
@@ -193,7 +209,21 @@ function lightFromBT(bt){
 
 //==================== INDICATORS ====================
 // Each returns {name,author,tier,score(-100..100),raw,signals[]}. signals causal.
-function mk(name,author,tier,score,raw,signals){return {name,author,tier,score:Math.round(clamp(score,-100,100)),raw,signals};}
+function mk(name,author,tier,score,raw,signals){
+  const sc=Number.isFinite(score)?Math.round(clamp(score,-100,100)):0;
+  return {name,author,tier,score:sc,raw,signals};}
+// Static metadata so a thrown indicator can still render a graceful placeholder card.
+const META=[["Smart Money Concepts","LuxAlgo","S"],["Squeeze Momentum","LazyBear","S"],
+["Supertrend","KivancOzbilgic","S"],["WaveTrend Oscillator","LazyBear","S"],
+["UT Bot Alerts","QuantNomad / Yo_adriiiiaan","S"],["VuManChu Cipher B","VuManChu","S"],
+["MACD Custom (MTF)","Community","S"],["Hull Suite","InSilico","A"],
+["SSL Channel","ErwinBeckers / Mihkel00","A"],["QQE MOD","Mihkel00","A"],
+["Range Filter","DonovanWall","A"],["Chandelier Exit","everget","A"],
+["CM Williams Vix Fix","ChrisMoody","A"],["Nadaraya-Watson Envelope","LuxAlgo","A"],
+["ADX / DMI","Wilder","A"],["Bollinger %B","John Bollinger","A"],
+["Fisher Transform","Ehlers","B"],["Schaff Trend Cycle","Schaff","B"],
+["Coral Trend","LazyBear","B"],["VWAP Bands (rolling)","Community","B"],
+["Ichimoku Cloud","Hosoda","B"],["RSI (14)","Wilder","B"]];
 
 // ---- S TIER ----
 function iSMC(O,H,L,C){
@@ -344,7 +374,8 @@ function iBBpct(O,H,L,C){
   const pb=C.map((c,i)=>(up[i]!=null&&up[i]-lo[i])?(c-lo[i])/(up[i]-lo[i]):null);
   const sig=pb.map(v=>v==null?0:sgn(v-0.5));
   const v=last(pb);
-  return mk("Bollinger %B","John Bollinger","A",clamp((v-0.5)*200,-100,100),"%b "+v.toFixed(2),sig);
+  return mk("Bollinger %B","John Bollinger","A",v==null?0:clamp((v-0.5)*200,-100,100),
+    "%b "+(v==null?"—":v.toFixed(2)),sig);
 }
 
 // ---- B TIER ----
@@ -447,10 +478,47 @@ function card(r,H){
 
 function activeTiers(){return [...document.querySelectorAll(".tierToggle:checked")].map(c=>c.value);}
 
+// Ensemble forecast from causal live signals, weighted by backtested edge.
+// Only indicators with demonstrated edge (hitRate>0.5 AND n>=8) at horizon H vote.
+function computeForecast(results,C,H){
+  let pUpW=0,wSum=0,up=0,down=0,voters=0;
+  for(const r of results){
+    const s=last(r.signals); if(!s) continue;       // current causal signal (same series we backtest)
+    const bt=backtest(r.signals,C,H);
+    if(!bt.n||bt.n<8||bt.hitRate<=0.5) continue;     // no demonstrated edge -> no vote
+    const w=bt.hitRate-0.5;                          // weight = edge over coin-flip
+    const pUpGiven = s>0 ? bt.hitRate : (1-bt.hitRate);
+    pUpW+=w*pUpGiven; wSum+=w; voters++;
+    if(s>0) up++; else down++;
+  }
+  if(!wSum) return {ok:false,total:results.length,voters:0};
+  return {ok:true,pUp:pUpW/wSum,voters,up,down,total:results.length};
+}
+function renderForecast(fc,H){
+  const el=document.getElementById("forecast"); el.style.display="flex";
+  if(!fc.ok){
+    el.className="forecast none";
+    el.innerHTML=`<div class="fclabel">Ensemble forecast · next ${H} bars</div>
+      <div class="fcdir neutral">— NO EDGE DETECTED</div>
+      <div class="fcsub">None of the ${fc.total} indicators currently shows a demonstrated edge (hit-rate &gt;50% with at least 8 trades) over the next ${H} bars on this symbol/timeframe. The honest answer is: no forecast. Try a different symbol, timeframe, or horizon.</div>`;
+    return;
+  }
+  const up=fc.pUp>=0.5, prob=(up?fc.pUp:1-fc.pUp)*100, cls=up?"long":"short";
+  el.className="forecast "+cls;
+  el.innerHTML=`<div class="fclabel">Ensemble forecast · next ${H} bars</div>
+    <div class="fcdir ${cls}">${up?"▲":"▼"} ${up?"UP":"DOWN"} ${prob.toFixed(0)}%</div>
+    <div>
+      <div class="fcbar"><div class="fcmark" style="left:calc(${(fc.pUp*100).toFixed(1)}% - 1.5px)"></div></div>
+      <div class="fcends"><span>DOWN</span><span>50/50</span><span>UP</span></div>
+    </div>
+    <div class="fcsub">${fc.voters} of ${fc.total} indicators have a demonstrated edge and vote (${fc.up} lean up · ${fc.down} lean down). Probability is hit-rate-weighted across those voters and assumes their past directional accuracy persists — it is a model estimate, not a guarantee. Single-symbol, direction-only, no fees. Not financial advice.</div>`;
+}
+
 let LASTRESULTS=null,LASTC=null;
 function renderAll(){
   if(!LASTRESULTS)return;
   const H=+document.getElementById("horizon").value;
+  renderForecast(computeForecast(LASTRESULTS,LASTRESULTS[0]._C,H),H);
   const tiers=activeTiers();const cont=document.getElementById("sections");cont.innerHTML="";
   const names={S:"Tier S — the icons",A:"Tier A — heavy hitters",B:"Tier B — widely-used standards"};
   let nL=0,nS=0,nN=0,sum=0,hitSum=0,hitN=0;
@@ -481,7 +549,14 @@ async function run(){
   try{
     const k=await fetchKlines(sym,iv);
     const O=k.map(r=>+r[1]),H=k.map(r=>+r[2]),L=k.map(r=>+r[3]),C=k.map(r=>+r[4]),V=k.map(r=>+r[5]);
-    LASTRESULTS=INDICATORS.map(fn=>{const r=fn(O,H,L,C,V);r._C=C;return r;});
+    LASTRESULTS=INDICATORS.map((fn,idx)=>{
+      let r;
+      try{ r=fn(O,H,L,C,V); }
+      catch(e){ const m=META[idx]||["?","","?"];
+        r={name:m[0],author:m[1],tier:m[2],score:0,raw:"n/a (insufficient data)",signals:Array(C.length).fill(0)}; }
+      if(!Number.isFinite(r.score)) r.score=0;
+      r._C=C; return r;
+    });
     renderAll();
     document.getElementById("price").textContent=sym.replace("USDT","")+" $"+last(C).toLocaleString();
     document.getElementById("updated").textContent="updated "+new Date().toLocaleTimeString()+" · "+k.length+" bars";
