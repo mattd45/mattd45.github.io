@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strategy Signal Dashboard</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141925; --panel2:#1b2230; --line:#26304a;
+    --txt:#e6ecf5; --muted:#8a97ad; --accent:#4c8dff;
+    --green:#27d07a; --amber:#ffb02e; --red:#ff5470; --neutral:#6b7793; --grey:#444c5e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  header{padding:22px 24px 8px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:22px;letter-spacing:.3px}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px;max-width:880px;line-height:1.5}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:16px 24px;
+    border-bottom:1px solid var(--line);background:var(--panel)}
+  .controls label{font-size:12px;color:var(--muted);margin-right:6px}
+  select,button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .meta{margin-left:auto;text-align:right;font-size:12px;color:var(--muted)}
+  .price{font-size:16px;color:var(--txt);font-weight:600}
+  .tiers{display:flex;gap:14px;align-items:center;padding:10px 24px;background:var(--panel2);
+    border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .tiers label{cursor:pointer}
+
+  .forecast{margin:16px 24px;padding:16px 20px;border-radius:14px;border:1px solid var(--line);
+    background:var(--panel);display:flex;flex-direction:column;gap:12px}
+  .forecast.long{border-color:rgba(39,208,122,.5);box-shadow:0 0 24px rgba(39,208,122,.12) inset}
+  .forecast.short{border-color:rgba(255,84,112,.5);box-shadow:0 0 24px rgba(255,84,112,.12) inset}
+  .forecast.none{border-color:var(--line)}
+  .fclabel{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .fcdir{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .fcdir.long{color:var(--green)} .fcdir.short{color:var(--red)} .fcdir.neutral{color:var(--neutral)}
+  .fcsub{font-size:12px;color:var(--muted);line-height:1.5;max-width:820px}
+  .fcbar{position:relative;height:12px;border-radius:8px;overflow:hidden;
+    background:linear-gradient(90deg,rgba(255,84,112,.35),rgba(107,119,147,.25) 50%,rgba(39,208,122,.35))}
+  .fcmark{position:absolute;top:-3px;width:3px;height:18px;background:var(--txt);border-radius:2px}
+  .fcends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+  .fcrow{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  .fcproj{font-size:13px;color:var(--muted)} .fcproj b.pos{color:var(--green)} .fcproj b.neg{color:var(--red)}
+  .fcchartlabel{font-size:10px;color:var(--muted);margin-top:6px}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .oracle{font-size:12px;color:#b48bff;font-weight:600}
+  .sparkwrap{margin-top:11px;border-top:1px solid var(--line);padding-top:11px}
+  .spark{width:100%;height:40px;display:block}
+
+  .diag{margin:0 24px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .dbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .dlabel{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .dval{font-size:24px;font-weight:800;margin:6px 0 4px}
+  .dsub{font-size:11px;color:var(--muted);line-height:1.5}
+  .dmuted{color:var(--muted);font-weight:400;font-size:11px}
+
+  .consensus{display:flex;gap:18px;flex-wrap:wrap;align-items:center;
+    padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .cbadge{font-size:13px;color:var(--muted)}
+  .cbadge b{font-size:18px;color:var(--txt)}
+  .bias{padding:6px 14px;border-radius:20px;font-weight:700;font-size:14px}
+
+  .tierhead{padding:18px 24px 4px;font-size:13px;letter-spacing:1px;color:var(--muted);
+    text-transform:uppercase;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:14px;padding:6px 24px 8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:16px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .card.long::before{background:var(--green)}
+  .card.short::before{background:var(--red)}
+  .card.neutral::before{background:var(--neutral)}
+  .card h3{margin:0 0 2px;font-size:15px}
+  .card .author{color:var(--muted);font-size:11px;margin-bottom:12px}
+
+  .row{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+  .row .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+
+  .light{display:flex;align-items:center;gap:8px}
+  .dot{width:15px;height:15px;border-radius:50%}
+  .dot.green{background:var(--green);box-shadow:0 0 11px var(--green)}
+  .dot.amber{background:var(--amber);box-shadow:0 0 11px var(--amber)}
+  .dot.red{background:var(--red);box-shadow:0 0 11px var(--red)}
+  .dot.grey{background:var(--grey)}
+  .conf-txt{font-size:13px;font-weight:600}
+
+  .pred{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+  .pred.pos{color:var(--green)} .pred.neg{color:var(--red)} .pred.zero{color:var(--neutral)}
+  .raw{font-size:11px;color:var(--muted)}
+
+  .dir{padding:4px 11px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.5px}
+  .dir.long{background:rgba(39,208,122,.15);color:var(--green)}
+  .dir.short{background:rgba(255,84,112,.15);color:var(--red)}
+  .dir.neutral{background:rgba(107,119,147,.15);color:var(--neutral)}
+
+  .note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px;
+    border-top:1px solid var(--line);padding-top:9px}
+
+  footer{padding:18px 24px 40px;color:var(--muted);font-size:12px;line-height:1.6;
+    border-top:1px solid var(--line);max-width:1000px}
+  .err{background:rgba(255,84,112,.12);border:1px solid var(--red);color:#ffd2da;
+    padding:12px 16px;border-radius:10px;margin:16px 24px}
+  a{color:var(--accent)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);
+    border-top-color:transparent;border-radius:50%;animation:s 0.8s linear infinite;vertical-align:middle}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Strategy Signal Dashboard <span style="font-size:13px;color:var(--muted)">· live + backtested</span></h1>
+  <div class="sub">23 of the most-popular TradingView indicators, computed in-browser from live Binance data. Each shows a <b>backtested hit-rate</b> traffic light, a normalized <b>prediction score</b> (−100…+100), and a <b>direction</b>. The light reflects how often that indicator's signals were directionally right on this symbol/timeframe over the chosen forward horizon.</div>
+</header>
+
+<div class="controls">
+  <div><label>Symbol</label>
+    <select id="symbol">
+      <option value="BTCUSDT">BTC / USDT</option>
+      <option value="ETHUSDT">ETH / USDT</option>
+      <option value="SOLUSDT">SOL / USDT</option>
+      <option value="BNBUSDT">BNB / USDT</option>
+      <option value="XRPUSDT">XRP / USDT</option>
+      <option value="DOGEUSDT">DOGE / USDT</option>
+    </select>
+  </div>
+  <div><label>Timeframe</label>
+    <select id="interval">
+      <option value="15m">15m</option>
+      <option value="1h" selected>1h</option>
+      <option value="4h">4h</option>
+      <option value="1d">1D</option>
+    </select>
+  </div>
+  <div><label>Hit-rate horizon</label>
+    <select id="horizon">
+      <option value="5">5 bars</option>
+      <option value="10" selected>10 bars</option>
+      <option value="20">20 bars</option>
+    </select>
+  </div>
+  <button class="primary" id="refresh">Refresh</button>
+  <label style="margin-left:4px"><input type="checkbox" id="auto" /> Auto (60s)</label>
+  <div class="meta">
+    <div class="price" id="price">—</div>
+    <div id="updated">not loaded</div>
+  </div>
+</div>
+
+<div class="tiers">
+  <span>Show tiers:</span>
+  <label><input type="checkbox" class="tierToggle" value="S" checked> S</label>
+  <label><input type="checkbox" class="tierToggle" value="A" checked> A</label>
+  <label><input type="checkbox" class="tierToggle" value="B" checked> B</label>
+  <span style="margin-left:auto">🟢 ≥55% &nbsp; 🟡 48–54% &nbsp; 🔴 &lt;48% &nbsp; ⚫ &lt;8 trades</span>
+</div>
+
+<div class="forecast none" id="forecast" style="display:none"></div>
+
+<div class="diag" id="diag" style="display:none"></div>
+
+<div class="consensus" id="consensus" style="display:none">
+  <div class="cbadge">Consensus <span class="bias" id="bias">—</span></div>
+  <div class="cbadge"><b id="nLong">0</b> long</div>
+  <div class="cbadge"><b id="nShort">0</b> short</div>
+  <div class="cbadge"><b id="nNeutral">0</b> neutral</div>
+  <div class="cbadge">Avg score <b id="avgScore">0</b></div>
+  <div class="cbadge">Avg hit-rate <b id="avgHit">—</b></div>
+</div>
+
+<div id="error"></div>
+<div id="sections"></div>
+
+<footer>
+  <strong>How to read this</strong><br>
+  <b>Prediction number</b> = a normalized signal score from −100 (strong short) to +100 (strong long), from each indicator's own math on the latest live bar — not a price target.
+  <b>Direction</b> = the indicator's current call.
+  <b>Sparkline</b> = the last 60 bars of price, coloured by that indicator's own signal at each bar (🟩 long · 🟥 short · ◾ neutral) — so you can see how its calls lined up with price.
+  <b>Traffic light = backtested hit-rate</b>: each indicator's causal (no-lookahead) signals are replayed across ~1000 historical bars; on every signal flip we check whether price moved in the signalled direction over the next N bars (your horizon). The light shows that hit-rate (🟢 ≥55% / 🟡 48–54% / 🔴 &lt;48% / ⚫ &lt;8 trades). 50% is the directional coin-flip baseline.<br><br>
+  <strong>Honest caveats.</strong> This is a single-symbol, single-parameter, direction-only backtest with overlapping forward windows and no fees/slippage — it indicates relative reliability, <em>not</em> tradeable expectancy. Most popular indicators sit near 50%; that's the real, sobering result. Popularity ≠ profitability. <strong>Not financial advice.</strong> Data: Binance public market API.
+</footer>
+
+<script>
+//==================== CONFIG ====================
+const HOSTS = ["https://api.binance.com","https://data-api.binance.vision","https://api.binance.us"];
+const LIMIT = 1000;
+
+//==================== SERIES HELPERS ====================
+const last = a => a[a.length-1];
+function sma(src,len){const o=Array(src.length).fill(null);let s=0,c=0;for(let i=0;i<src.length;i++){const v=src[i];if(v==null){s=0;c=0;o[i]=null;continue;}s+=v;c++;if(c>len){s-=src[i-len];c--;}if(c>=len)o[i]=s/len;}return o;}
+function ema(src,len){const o=Array(src.length).fill(null);const k=2/(len+1);let p=null;for(let i=0;i<src.length;i++){const v=src[i];if(v==null)continue;p=(p==null)?v:v*k+p*(1-k);o[i]=p;}return o;}
+function rma(src,len){const o=Array(src.length).fill(null);let p=null,n=0,seed=0;for(let i=0;i<src.length;i++){const v=src[i];if(v==null)continue;if(p==null){seed+=v;n++;if(n>=len){p=seed/len;o[i]=p;}}else{p=(p*(len-1)+v)/len;o[i]=p;}}return o;}
+function wma(src,len){const o=Array(src.length).fill(null);const den=len*(len+1)/2;for(let i=len-1;i<src.length;i++){let ok=true,s=0;for(let k=0;k<len;k++){const v=src[i-k];if(v==null){ok=false;break;}s+=v*(len-k);}if(ok)o[i]=s/den;}return o;}
+function hma(src,len){const half=Math.max(1,Math.floor(len/2)),sq=Math.max(1,Math.round(Math.sqrt(len)));const w1=wma(src,half),w2=wma(src,len);const d=src.map((_,i)=>(w1[i]!=null&&w2[i]!=null)?2*w1[i]-w2[i]:null);return wma(d,sq);}
+function stdev(src,len){const o=Array(src.length).fill(null);for(let i=len-1;i<src.length;i++){let ok=true,m=0;for(let j=i-len+1;j<=i;j++){if(src[j]==null){ok=false;break;}m+=src[j];}if(!ok)continue;m/=len;let s=0;for(let j=i-len+1;j<=i;j++){const d=src[j]-m;s+=d*d;}o[i]=Math.sqrt(s/len);}return o;}
+function highest(src,len){const o=Array(src.length).fill(null);for(let i=len-1;i<src.length;i++){let m=-Infinity;for(let j=i-len+1;j<=i;j++)m=Math.max(m,src[j]);o[i]=m;}return o;}
+function lowest(src,len){const o=Array(src.length).fill(null);for(let i=len-1;i<src.length;i++){let m=Infinity;for(let j=i-len+1;j<=i;j++)m=Math.min(m,src[j]);o[i]=m;}return o;}
+function trueRange(h,l,c){const o=Array(c.length).fill(null);for(let i=0;i<c.length;i++){o[i]=i===0?h[i]-l[i]:Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1]));}return o;}
+function atr(h,l,c,len){return rma(trueRange(h,l,c),len);}
+function rsi(src,len){const n=src.length,g=Array(n).fill(null),l=Array(n).fill(null);for(let i=1;i<n;i++){const ch=src[i]-src[i-1];g[i]=Math.max(ch,0);l[i]=Math.max(-ch,0);}const ag=rma(g,len),al=rma(l,len);return src.map((_,i)=>(ag[i]!=null&&al[i]!=null)?(al[i]===0?100:100-100/(1+ag[i]/al[i])):null);}
+function linreg(src,len,offset){offset=offset||0;const o=Array(src.length).fill(null);for(let i=len-1;i<src.length;i++){let ok=true;for(let k=0;k<len;k++){if(src[i-len+1+k]==null){ok=false;break;}}if(!ok)continue;let sx=0,sy=0,sxy=0,sx2=0;for(let k=0;k<len;k++){const x=k,y=src[i-len+1+k];sx+=x;sy+=y;sxy+=x*y;sx2+=x*x;}const n=len,slope=(n*sxy-sx*sy)/(n*sx2-sx*sx),icpt=(sy-slope*sx)/n;o[i]=icpt+slope*(len-1-offset);}return o;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sgn=x=>x>0?1:x<0?-1:0;
+const hlc3=(H,L,C)=>C.map((c,i)=>(H[i]+L[i]+C[i])/3);
+function dirOf(score){return score>8?"LONG":score<-8?"SHORT":"NEUTRAL";}
+
+//==================== BACKTEST ====================
+// signals: array of -1/0/1 (causal). Evaluate on flip entries over horizon H.
+function backtest(signals,C,H){
+  let n=0,hit=0,prev=0;
+  for(let i=0;i<C.length-H;i++){
+    const s=signals[i]; if(!s) continue;
+    if(s!==prev){ prev=s; const fwd=sgn(C[i+H]-C[i]); if(fwd!==0){ n++; if(fwd===s) hit++; } }
+  }
+  return {n, hitRate: n? hit/n : null};
+}
+function lightFromBT(bt){
+  if(!bt.n || bt.n<8) return {cls:"grey", txt:(bt.n||0)+" trades"};
+  const hr=bt.hitRate*100;
+  const cls = hr>=55?"green":hr>=48?"amber":"red";
+  return {cls, txt:hr.toFixed(0)+"% · n="+bt.n};
+}
+
+//==================== INDICATORS ====================
+// Each returns {name,author,tier,score(-100..100),raw,signals[]}. signals causal.
+function mk(name,author,tier,score,raw,signals){
+  const sc=Number.isFinite(score)?Math.round(clamp(score,-100,100)):0;
+  return {name,author,tier,score:sc,raw,signals};}
+// Static metadata so a thrown indicator can still render a graceful placeholder card.
+const META=[["Smart Money Concepts","LuxAlgo","S"],["Squeeze Momentum","LazyBear","S"],
+["Supertrend","KivancOzbilgic","S"],["WaveTrend Oscillator","LazyBear","S"],
+["UT Bot Alerts","QuantNomad / Yo_adriiiiaan","S"],["VuManChu Cipher B","VuManChu","S"],
+["MACD Custom (MTF)","Community","S"],["Hull Suite","InSilico","A"],
+["SSL Channel","ErwinBeckers / Mihkel00","A"],["QQE MOD","Mihkel00","A"],
+["Range Filter","DonovanWall","A"],["Chandelier Exit","everget","A"],
+["CM Williams Vix Fix","ChrisMoody","A"],["Nadaraya-Watson Envelope","LuxAlgo","A"],
+["ADX / DMI","Wilder","A"],["Bollinger %B","John Bollinger","A"],
+["Fisher Transform","Ehlers","B"],["Schaff Trend Cycle","Schaff","B"],
+["Coral Trend","LazyBear","B"],["VWAP Bands (rolling)","Community","B"],
+["Ichimoku Cloud","Hosoda","B"],["RSI (14)","Wilder","B"]];
+
+// ---- S TIER ----
+function iSMC(O,H,L,C){
+  const lr=5,n=C.length,sig=Array(n).fill(0);let lh=null,ll=null,bias=0;
+  for(let i=0;i<n;i++){const p=i-lr;if(p>=lr){let ph=true,pl=true;for(let j=p-lr;j<=p+lr;j++){if(H[j]>H[p])ph=false;if(L[j]<L[p])pl=false;}if(ph)lh=H[p];if(pl)ll=L[p];}
+    if(lh!=null&&C[i]>lh)bias=1;else if(ll!=null&&C[i]<ll)bias=-1;sig[i]=bias;}
+  const c=last(C),mid=(lh!=null&&ll!=null)?(lh+ll)/2:c,rng=(lh!=null&&ll!=null)?(lh-ll||1e-9):1e-9;
+  const pen=clamp(Math.abs(c-mid)/rng,0,1);
+  return mk("Smart Money Concepts","LuxAlgo","S",bias*(40+pen*60),
+    "BOS "+(bias>0?"bull":bias<0?"bear":"–")+(lh!=null?" · "+ll.toFixed(0)+"–"+lh.toFixed(0):""),sig);
+}
+function iSqueeze(O,H,L,C){
+  const len=20,basis=sma(C,len),hh=highest(H,len),ll=lowest(L,len);
+  const src=C.map((c,i)=>(hh[i]!=null&&basis[i]!=null)?c-(((hh[i]+ll[i])/2+basis[i])/2):null);
+  const val=linreg(src,len,0);const sig=val.map(v=>v==null?0:sgn(v));
+  const recent=val.slice(-80).filter(x=>x!=null).map(Math.abs),mx=Math.max(...recent,1e-9);
+  const v=last(val);
+  return mk("Squeeze Momentum","LazyBear","S",clamp((v/mx),-1,1)*100,"mom "+v.toFixed(2),sig);
+}
+function waveTrend(H,L,C,n1,n2){
+  const ap=hlc3(H,L,C),esa=ema(ap,n1);
+  const d=ema(ap.map((v,i)=>esa[i]!=null?Math.abs(v-esa[i]):null),n1);
+  const ci=ap.map((v,i)=>(esa[i]!=null&&d[i])?(v-esa[i])/(0.015*d[i]):null);
+  const wt1=ema(ci,n2),wt2=sma(wt1,4);return {wt1,wt2};
+}
+function iWaveTrend(O,H,L,C){
+  const {wt1,wt2}=waveTrend(H,L,C,10,21);
+  const sig=wt1.map((a,i)=>(a!=null&&wt2[i]!=null)?sgn(a-wt2[i]):0);
+  const a=last(wt1),b=last(wt2),diff=a-b;
+  return mk("WaveTrend Oscillator","LazyBear","S",clamp(diff*6+a*0.3,-100,100),
+    "wt1 "+a.toFixed(1)+" / wt2 "+b.toFixed(1),sig);
+}
+function atrTrail(O,H,L,C,key,len){
+  const a=atr(H,L,C,len),n=C.length,stop=Array(n).fill(null),sig=Array(n).fill(0);
+  for(let i=0;i<n;i++){if(a[i]==null)continue;const nl=key*a[i],ps=stop[i-1];
+    if(ps==null){stop[i]=C[i]-nl;}
+    else if(C[i]>ps&&C[i-1]>ps)stop[i]=Math.max(ps,C[i]-nl);
+    else if(C[i]<ps&&C[i-1]<ps)stop[i]=Math.min(ps,C[i]+nl);
+    else stop[i]=C[i]>ps?C[i]-nl:C[i]+nl;
+    sig[i]=C[i]>stop[i]?1:-1;}
+  return {stop,sig,a};
+}
+function iUTBot(O,H,L,C){
+  const {stop,sig,a}=atrTrail(O,H,L,C,1,10);const c=last(C),s=last(stop);
+  const dist=clamp(Math.abs(c-s)/(last(a)*2),0,1);
+  return mk("UT Bot Alerts","QuantNomad / Yo_adriiiiaan","S",sgn(c-s)*(40+dist*60),"stop "+s.toFixed(2),sig);
+}
+function iCipherB(O,H,L,C){
+  const {wt1,wt2}=waveTrend(H,L,C,9,12);
+  const mfRaw=C.map((c,i)=>{const rng=H[i]-L[i];return rng?((C[i]-(i>0?C[i-1]:C[i]))/rng):0;});
+  const mf=sma(mfRaw,9);
+  const sig=wt1.map((a,i)=>(a!=null&&wt2[i]!=null)?sgn(a-wt2[i]):0);
+  const a=last(wt1),b=last(wt2),m=last(mf),diff=a-b;
+  return mk("VuManChu Cipher B","VuManChu","S",clamp(diff*6+m*30,-100,100),
+    "wt "+a.toFixed(1)+" · mf "+(m*100).toFixed(1),sig);
+}
+function iMACD(O,H,L,C){
+  const e12=ema(C,12),e26=ema(C,26);
+  const macd=e12.map((v,i)=>(v!=null&&e26[i]!=null)?v-e26[i]:null);
+  const sigl=ema(macd,9),hist=macd.map((v,i)=>(v!=null&&sigl[i]!=null)?v-sigl[i]:null);
+  const sig=hist.map(v=>v==null?0:sgn(v));
+  const h=last(hist),hs=last(stdev(hist.filter(x=>x!=null),50))||Math.abs(h)||1e-9;
+  return mk("MACD Custom (MTF)","Community","S",clamp(h/(hs*2)*100,-100,100),
+    "hist "+h.toFixed(2)+" · macd "+last(macd).toFixed(2),sig);
+}
+
+// ---- A TIER ----
+function iHull(O,H,L,C){
+  const h=hma(C,55),sig=h.map((v,i)=>(v!=null&&i>=2&&h[i-2]!=null)?sgn(v-h[i-2]):0);
+  const v=last(h),v2=h[h.length-3];const a0=last(atr(H,L,C,14))||1e-9;
+  return mk("Hull Suite","InSilico","A",clamp((v-v2)/a0*60,-100,100),"hma "+v.toFixed(2),sig);
+}
+function iSSL(O,H,L,C){
+  const len=10,sh=sma(H,len),sl=sma(L,len),n=C.length,sig=Array(n).fill(0);let hlv=0;
+  for(let i=0;i<n;i++){if(sh[i]==null){continue;}if(C[i]>sh[i])hlv=1;else if(C[i]<sl[i])hlv=-1;sig[i]=hlv;}
+  return mk("SSL Channel","ErwinBeckers / Mihkel00","A",last(sig)*70,
+    "smaH "+last(sh).toFixed(2)+" / smaL "+last(sl).toFixed(2),sig);
+}
+function iQQE(O,H,L,C){
+  const rp=6,sf=5,W=rp*2-1,F=4.236;
+  const r=rsi(C,rp),rm=ema(r,sf),n=C.length;
+  const atrr=rm.map((v,i)=>(v!=null&&rm[i-1]!=null)?Math.abs(v-rm[i-1]):null);
+  const maAtr=ema(atrr,W),dar=ema(maAtr,W).map(v=>v==null?null:v*F);
+  const lb=Array(n).fill(null),sb=Array(n).fill(null),sig=Array(n).fill(0);let tr=0;
+  for(let i=0;i<n;i++){if(rm[i]==null||dar[i]==null){continue;}
+    const nl=rm[i]-dar[i],ns=rm[i]+dar[i];
+    lb[i]=(lb[i-1]!=null&&rm[i-1]>lb[i-1]&&rm[i]>lb[i-1])?Math.max(lb[i-1],nl):nl;
+    sb[i]=(sb[i-1]!=null&&rm[i-1]<sb[i-1]&&rm[i]<sb[i-1])?Math.min(sb[i-1],ns):ns;
+    if(rm[i]>(sb[i-1]!=null?sb[i-1]:ns))tr=1;else if(rm[i]<(lb[i-1]!=null?lb[i-1]:nl))tr=-1;
+    sig[i]=tr;}
+  return mk("QQE MOD","Mihkel00","A",last(sig)*clamp(Math.abs(last(rm)-50)*3,30,95),
+    "rsiMa "+last(rm).toFixed(1),sig);
+}
+function iRangeFilter(O,H,L,C){
+  const per=50,mult=3,n=C.length;
+  const dc=C.map((c,i)=>i>0?Math.abs(c-C[i-1]):0);
+  const avrng=ema(dc,per),smooth=ema(avrng,per*2-1).map(v=>v==null?null:v*mult);
+  const filt=Array(n).fill(null),sig=Array(n).fill(0);
+  for(let i=0;i<n;i++){if(smooth[i]==null){continue;}const pf=filt[i-1];
+    if(pf==null){filt[i]=C[i];continue;}
+    if(C[i]>pf)filt[i]=Math.max(pf,C[i]-smooth[i]);
+    else filt[i]=Math.min(pf,C[i]+smooth[i]);
+    sig[i]=filt[i]>filt[i-1]?1:filt[i]<filt[i-1]?-1:sig[i-1]||0;}
+  return mk("Range Filter","DonovanWall","A",last(sig)*65,"filt "+last(filt).toFixed(2),sig);
+}
+function iChandelier(O,H,L,C){
+  const len=22,m=3,a=atr(H,L,C,len),hh=highest(H,len),ll=lowest(L,len),n=C.length;
+  const ls=Array(n).fill(null),ss=Array(n).fill(null),sig=Array(n).fill(0);let dir=1;
+  for(let i=0;i<n;i++){if(a[i]==null){continue;}
+    let l=hh[i]-a[i]*m,s=ll[i]+a[i]*m;
+    ls[i]=(ls[i-1]!=null&&C[i-1]>ls[i-1])?Math.max(l,ls[i-1]):l;
+    ss[i]=(ss[i-1]!=null&&C[i-1]<ss[i-1])?Math.min(s,ss[i-1]):s;
+    if(C[i]>ss[i-1])dir=1;else if(C[i]<ls[i-1])dir=-1;sig[i]=dir;}
+  return mk("Chandelier Exit","everget","A",last(sig)*70,"long "+last(ls).toFixed(2),sig);
+}
+function iVixFix(O,H,L,C){
+  const pd=22,hc=highest(C,pd),n=C.length;
+  const wvf=C.map((c,i)=>hc[i]!=null?(hc[i]-L[i])/hc[i]*100:null);
+  const rh=highest(wvf.map(v=>v==null?-Infinity:v),50);
+  const sig=wvf.map((v,i)=>(v!=null&&rh[i]>-Infinity&&v>=rh[i]*0.85)?1:0); // fear spike -> reversal up bias
+  const v=last(wvf);
+  return mk("CM Williams Vix Fix","ChrisMoody","A",last(sig)?clamp(v*4,0,95):0,"wvf "+v.toFixed(2),sig);
+}
+function iNadaraya(O,H,L,C){
+  const L0=50,h=8,n=C.length,nw=Array(n).fill(null);
+  for(let i=L0-1;i<n;i++){let num=0,den=0;for(let k=0;k<L0;k++){const w=Math.exp(-(k*k)/(2*h*h));num+=w*C[i-k];den+=w;}nw[i]=num/den;}
+  const sig=nw.map((v,i)=>(v!=null&&nw[i-1]!=null)?sgn(v-nw[i-1]):0);
+  const a0=last(atr(H,L,C,14))||1e-9;
+  return mk("Nadaraya-Watson Envelope","LuxAlgo","A",clamp((last(nw)-nw[n-2])/a0*80,-100,100),
+    "nw "+last(nw).toFixed(2),sig);
+}
+function iADX(O,H,L,C){
+  const len=14,n=C.length,pdm=Array(n).fill(0),ndm=Array(n).fill(0);
+  for(let i=1;i<n;i++){const up=H[i]-H[i-1],dn=L[i-1]-L[i];pdm[i]=(up>dn&&up>0)?up:0;ndm[i]=(dn>up&&dn>0)?dn:0;}
+  const tr=trueRange(H,L,C),atr14=rma(tr,len),pdi=rma(pdm,len),ndi=rma(ndm,len);
+  const pDI=pdi.map((v,i)=>(v!=null&&atr14[i])?100*v/atr14[i]:null);
+  const nDI=ndi.map((v,i)=>(v!=null&&atr14[i])?100*v/atr14[i]:null);
+  const dx=pDI.map((v,i)=>(v!=null&&nDI[i]!=null&&(v+nDI[i]))?100*Math.abs(v-nDI[i])/(v+nDI[i]):null);
+  const adx=rma(dx,len);
+  const sig=pDI.map((v,i)=>(v!=null&&nDI[i]!=null)?sgn(v-nDI[i]):0);
+  const str=clamp((last(adx)||0)/40,0,1);
+  return mk("ADX / DMI","Wilder","A",last(sig)*(40+str*55),
+    "+DI "+last(pDI).toFixed(0)+" −DI "+last(nDI).toFixed(0)+" ADX "+(last(adx)||0).toFixed(0),sig);
+}
+function iBBpct(O,H,L,C){
+  const len=20,basis=sma(C,len),dev=stdev(C,len);
+  const up=basis.map((b,i)=>b!=null?b+2*dev[i]:null),lo=basis.map((b,i)=>b!=null?b-2*dev[i]:null);
+  const pb=C.map((c,i)=>(up[i]!=null&&up[i]-lo[i])?(c-lo[i])/(up[i]-lo[i]):null);
+  const sig=pb.map(v=>v==null?0:sgn(v-0.5));
+  const v=last(pb);
+  return mk("Bollinger %B","John Bollinger","A",v==null?0:clamp((v-0.5)*200,-100,100),
+    "%b "+(v==null?"—":v.toFixed(2)),sig);
+}
+
+// ---- B TIER ----
+function iFisher(O,H,L,C){
+  const per=9,m=hlc3(H,L,C).map((_,i)=>(H[i]+L[i])/2),n=C.length;
+  const mn=lowest(m,per),mx=highest(m,per);
+  const val=Array(n).fill(null),fish=Array(n).fill(null);let pv=0,pf=0;
+  for(let i=0;i<n;i++){if(mn[i]==null){continue;}const rng=(mx[i]-mn[i])||1e-9;
+    let v=0.66*((m[i]-mn[i])/rng-0.5)+0.67*pv;v=clamp(v,-0.999,0.999);val[i]=v;
+    const f=0.5*Math.log((1+v)/(1-v))+0.5*pf;fish[i]=f;pv=v;pf=f;}
+  const sig=fish.map((v,i)=>(v!=null&&fish[i-1]!=null)?sgn(v-fish[i-1]):0);
+  return mk("Fisher Transform","Ehlers","B",clamp(last(fish)*30,-100,100),"fish "+last(fish).toFixed(2),sig);
+}
+function iSTC(O,H,L,C){
+  const fast=23,slow=50,cyc=10,n=C.length;
+  const macd=ema(C,fast).map((v,i)=>{const s=ema(C,slow)[i];return(v!=null&&s!=null)?v-s:null;});
+  function stoch(src){const ll=lowest(src,cyc),hh=highest(src,cyc);return src.map((v,i)=>(v!=null&&ll[i]!=null&&(hh[i]-ll[i]))?(v-ll[i])/(hh[i]-ll[i])*100:null);}
+  const k1=stoch(macd),d1=ema(k1,3),k2=stoch(d1),stc=ema(k2,3);
+  const sig=stc.map((v,i)=>(v!=null&&stc[i-1]!=null)?sgn(v-stc[i-1]):0);
+  const v=last(stc)||50;
+  return mk("Schaff Trend Cycle","Schaff","B",clamp((v-50)*2,-100,100),"stc "+v.toFixed(1),sig);
+}
+function iCoral(O,H,L,C){
+  const len=21,cd=0.4,n=C.length;
+  const di=(len-1)/2+1,c1=2/(di+1),c2=1-c1;
+  const c3=3*(cd*cd+cd*cd*cd),c4=-3*(2*cd*cd+cd+cd*cd*cd),c5=3*cd+1+cd*cd*cd+3*cd*cd;
+  let i1=0,i2=0,i3=0,i4=0,i5=0,i6=0;const bfr=Array(n).fill(null);
+  for(let i=0;i<n;i++){i1=c1*C[i]+c2*i1;i2=c1*i1+c2*i2;i3=c1*i2+c2*i3;i4=c1*i3+c2*i4;i5=c1*i4+c2*i5;i6=c1*i5+c2*i6;
+    bfr[i]=-cd*cd*cd*i6+c3*i5+c4*i4+c5*i3;}
+  const sig=bfr.map((v,i)=>(i>30&&v!=null&&bfr[i-1]!=null)?sgn(v-bfr[i-1]):0);
+  const a0=last(atr(H,L,C,14))||1e-9;
+  return mk("Coral Trend","LazyBear","B",clamp((last(bfr)-bfr[n-2])/a0*70,-100,100),"coral "+last(bfr).toFixed(2),sig);
+}
+function iVWAP(O,H,L,C,V){
+  const len=100,tp=hlc3(H,L,C),n=C.length,vwap=Array(n).fill(null);
+  for(let i=len-1;i<n;i++){let pv=0,vv=0;for(let k=0;k<len;k++){pv+=tp[i-k]*V[i-k];vv+=V[i-k];}vwap[i]=vv?pv/vv:null;}
+  const sig=vwap.map((v,i)=>v!=null?sgn(C[i]-v):0);
+  const a0=last(atr(H,L,C,14))||1e-9;
+  return mk("VWAP Bands (rolling)","Community","B",clamp((last(C)-last(vwap))/a0*40,-100,100),
+    "vwap "+last(vwap).toFixed(2),sig);
+}
+function iIchimoku(O,H,L,C){
+  const tk=highest(H,9).map((h,i)=>h!=null?(h+lowest(L,9)[i])/2:null);
+  const kj=highest(H,26).map((h,i)=>h!=null?(h+lowest(L,26)[i])/2:null);
+  const sa=tk.map((t,i)=>(t!=null&&kj[i]!=null)?(t+kj[i])/2:null);
+  const sb=highest(H,52).map((h,i)=>h!=null?(h+lowest(L,52)[i])/2:null);
+  const sig=C.map((c,i)=>{if(sa[i]==null||sb[i]==null||tk[i]==null||kj[i]==null)return 0;
+    const top=Math.max(sa[i],sb[i]),bot=Math.min(sa[i],sb[i]);
+    if(c>top&&tk[i]>kj[i])return 1;if(c<bot&&tk[i]<kj[i])return -1;return sgn(tk[i]-kj[i]);});
+  return mk("Ichimoku Cloud","Hosoda","B",last(sig)*clamp(Math.abs(last(tk)-last(kj))/(last(C)*0.01),30,90),
+    "tenkan "+last(tk).toFixed(0)+" kijun "+last(kj).toFixed(0),sig);
+}
+function iRSI(O,H,L,C){
+  const r=rsi(C,14),sig=r.map(v=>v==null?0:sgn(v-50));const v=last(r);
+  return mk("RSI (14)","Wilder","B",clamp((v-50)*3,-100,100),"rsi "+v.toFixed(1),sig);
+}
+
+const INDICATORS=[iSMC,iSqueeze,iSupertrend_wrap,iWaveTrend,iUTBot,iCipherB,iMACD,
+  iHull,iSSL,iQQE,iRangeFilter,iChandelier,iVixFix,iNadaraya,iADX,iBBpct,
+  iFisher,iSTC,iCoral,iVWAP,iIchimoku,iRSI];
+// Supertrend wrapper (uses atrTrail-like dedicated math)
+function iSupertrend_wrap(O,H,L,C){
+  const len=10,mult=3,a=atr(H,L,C,len),n=C.length;
+  const up=Array(n).fill(null),dn=Array(n).fill(null),tr=Array(n).fill(1),st=Array(n).fill(null),sig=Array(n).fill(0);
+  for(let i=0;i<n;i++){if(a[i]==null)continue;const hl2=(H[i]+L[i])/2;let bu=hl2+mult*a[i],bl=hl2-mult*a[i];
+    up[i]=(up[i-1]!=null&&C[i-1]<=up[i-1])?Math.min(bu,up[i-1]):bu;
+    dn[i]=(dn[i-1]!=null&&C[i-1]>=dn[i-1])?Math.max(bl,dn[i-1]):bl;
+    let t=tr[i-1]||1;if(t===-1&&C[i]>up[i-1])t=1;else if(t===1&&C[i]<dn[i-1])t=-1;tr[i]=t;
+    st[i]=t===1?dn[i]:up[i];sig[i]=t;}
+  const c=last(C),stv=last(st),a0=last(a);const dist=clamp(Math.abs(c-stv)/(a0*3),0,1);
+  return mk("Supertrend","KivancOzbilgic","S",last(tr)*(40+dist*60),"line "+stv.toFixed(2),sig);
+}
+
+//==================== DATA ====================
+async function fetchKlines(symbol,interval){
+  let lastErr;
+  for(const host of HOSTS){
+    try{const r=await fetch(`${host}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,{cache:"no-store"});
+      if(!r.ok)throw new Error(host+" HTTP "+r.status);const j=await r.json();
+      if(!Array.isArray(j)||!j.length)throw new Error("empty");return j;
+    }catch(e){lastErr=e;}}
+  throw lastErr||new Error("all hosts failed");
+}
+
+//==================== RENDER ====================
+function card(r,H){
+  const bt=backtest(r.signals,r._C,H),lt=lightFromBT(bt);
+  r._bt=bt;
+  const dir=dirOf(r.score),dlc=dir.toLowerCase();
+  const pc=r.score>8?"pos":r.score<-8?"neg":"zero";
+  const arrow=dir==="LONG"?"▲":dir==="SHORT"?"▼":"■";const sign=r.score>0?"+":"";
+  let oracle="";
+  if(bt.n>=8){const cei=Math.max(bt.hitRate,1-bt.hitRate)*100,tag=bt.hitRate>=0.5?"follow":"fade";
+    oracle=`<div class="row"><span class="k" title="Best achievable only with hindsight — unattainable live">Oracle ceiling</span><span class="oracle">${cei.toFixed(0)}% · ${tag}</span></div>`;}
+  return `<div class="card ${dlc}">
+    <h3>${r.name}</h3><div class="author">by ${r.author}</div>
+    <div class="row"><span class="k">Hit-rate</span>
+      <span class="light"><span class="dot ${lt.cls}"></span><span class="conf-txt">${lt.txt}</span></span></div>
+    ${oracle}
+    <div class="row"><span class="k">Prediction</span><span class="pred ${pc}">${sign}${r.score}</span></div>
+    <div class="row"><span class="raw">${r.raw}</span><span class="dir ${dlc}">${arrow} ${dir}</span></div>
+    <div class="sparkwrap" title="Last 60 bars of price, coloured by this indicator's signal — green=long, red=short, grey=neutral">${sparkline(r._C,r.signals,60)}</div>
+  </div>`;
+}
+
+function activeTiers(){return [...document.querySelectorAll(".tierToggle:checked")].map(c=>c.value);}
+
+// Ensemble forecast from causal live signals, weighted by backtested edge.
+// Only indicators with demonstrated edge (hitRate>0.5 AND n>=8) at horizon H vote.
+function computeForecast(results,C,H){
+  let pUpW=0,wSum=0,up=0,down=0,voters=0;
+  for(const r of results){
+    const s=last(r.signals); if(!s) continue;       // current causal signal (same series we backtest)
+    const bt=backtest(r.signals,C,H);
+    if(!bt.n||bt.n<8||bt.hitRate<=0.5) continue;     // no demonstrated edge -> no vote
+    const w=bt.hitRate-0.5;                          // weight = edge over coin-flip
+    const pUpGiven = s>0 ? bt.hitRate : (1-bt.hitRate);
+    pUpW+=w*pUpGiven; wSum+=w; voters++;
+    if(s>0) up++; else down++;
+  }
+  if(!wSum) return {ok:false,total:results.length,voters:0};
+  return {ok:true,pUp:pUpW/wSum,voters,up,down,total:results.length};
+}
+// ---- FORWARD PROJECTION (genuine forecast, calibrated on edge-weighted conditional returns) ----
+function logret1(C){const o=[null];for(let i=1;i<C.length;i++)o.push(Math.log(C[i]/C[i-1]));return o;}
+function condReturn(sig,C,H){ // avg forward H-bar log return at past bars sharing the current signal state
+  const cur=last(sig); if(!cur) return null; let sum=0,cnt=0;
+  for(let i=0;i<C.length-H;i++){ if(sig[i]===cur){ sum+=Math.log(C[i+H]/C[i]); cnt++; } }
+  return cnt>=8 ? sum/cnt : null;
+}
+function projectPath(results,C,H){
+  let muW=0,wSum=0;
+  for(const r of results){const cur=last(r.signals);if(!cur)continue;
+    const bt=backtest(r.signals,C,H);if(!bt.n||bt.n<8||bt.hitRate<=0.5)continue;
+    const cr=condReturn(r.signals,C,H);if(cr==null)continue;
+    const w=bt.hitRate-0.5; muW+=w*cr; wSum+=w;}
+  const muH = wSum? muW/wSum : 0, drift = muH/H;
+  const lr=logret1(C).filter(x=>x!=null).slice(-200);
+  const mean=lr.reduce((a,b)=>a+b,0)/lr.length;
+  const sigma=Math.sqrt(lr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/lr.length);
+  const now=last(C),center=[],up1=[],lo1=[],up2=[],lo2=[];
+  for(let k=0;k<=H;k++){const c=now*Math.exp(drift*k);center.push(c);
+    up1.push(c*Math.exp(sigma*Math.sqrt(k)));lo1.push(c*Math.exp(-sigma*Math.sqrt(k)));
+    up2.push(c*Math.exp(2*sigma*Math.sqrt(k)));lo2.push(c*Math.exp(-2*sigma*Math.sqrt(k)));}
+  return {center,up1,lo1,up2,lo2,muH,sigma,hasEdge:wSum>0};
+}
+function projChart(C,proj,H,up){
+  const histN=50,hist=C.slice(-histN),np=hist.length+H;
+  const ys=[...hist,...proj.up2,...proj.lo2],ymin=Math.min(...ys),ymax=Math.max(...ys),rng=(ymax-ymin)||1;
+  const W=900,Ht=170,pad=6;
+  const X=i=>pad+i*(W-2*pad)/(np-1), Y=v=>Ht-pad-((v-ymin)/rng)*(Ht-2*pad);
+  const col=up?"#27d07a":"#ff5470";
+  const hp=hist.map((v,i)=>X(i)+","+Y(v)).join(" ");
+  const cx=k=>X(hist.length-1+k);
+  const band=(u,l)=>{let p="M";for(let k=0;k<=H;k++)p+=cx(k)+","+Y(u[k])+" L";for(let k=H;k>=0;k--)p+=cx(k)+","+Y(l[k])+" L";return p.slice(0,-2)+"Z";};
+  const cpath=proj.center.map((v,k)=>cx(k)+","+Y(v)).join(" ");
+  const divX=X(hist.length-1);
+  return `<svg viewBox="0 0 ${W} ${Ht}" preserveAspectRatio="none" style="width:100%;height:170px;display:block">
+    <path d="${band(proj.up2,proj.lo2)}" fill="${col}" opacity="0.10"/>
+    <path d="${band(proj.up1,proj.lo1)}" fill="${col}" opacity="0.18"/>
+    <line x1="${divX}" y1="${pad}" x2="${divX}" y2="${Ht-pad}" stroke="#3a4663" stroke-dasharray="3 3"/>
+    <polyline points="${hp}" fill="none" stroke="#c8d2e6" stroke-width="1.6"/>
+    <polyline points="${cpath}" fill="none" stroke="${col}" stroke-width="1.8" stroke-dasharray="5 4"/>
+  </svg>`;
+}
+
+// ---- PER-CARD SPARKLINE (price line coloured by that indicator's signal) ----
+function sparkline(C,signals,n){
+  const hist=C.slice(-n),sig=signals.slice(-n);
+  if(hist.length<2) return "";
+  const min=Math.min(...hist),max=Math.max(...hist),rng=(max-min)||1;
+  const W=300,Ht=40,pad=3;
+  const X=i=>(pad+i*(W-2*pad)/(hist.length-1)).toFixed(1), Y=v=>(Ht-pad-((v-min)/rng)*(Ht-2*pad)).toFixed(1);
+  const paths={"1":"","-1":"","0":""};
+  for(let i=1;i<hist.length;i++){const s=String(sig[i]||0);
+    paths[s]+=`M${X(i-1)},${Y(hist[i-1])} L${X(i)},${Y(hist[i])} `;}
+  const col={"1":"#27d07a","-1":"#ff5470","0":"#6b7793"};
+  let out="";for(const k of ["0","-1","1"]) if(paths[k]) out+=`<path d="${paths[k]}" fill="none" stroke="${col[k]}" stroke-width="1.4"/>`;
+  return `<svg viewBox="0 0 ${W} ${Ht}" preserveAspectRatio="none" class="spark">${out}</svg>`;
+}
+
+// ---- PERFECT-FORESIGHT BENCHMARK (theoretical ceiling, unattainable live) ----
+function perfectForesight(results,C,H){
+  let oracle=0,ens=0;const start=60;
+  for(let i=start;i<C.length-H;i+=H){const r=Math.log(C[i+H]/C[i]);oracle+=Math.abs(r);
+    let vote=0;for(const res of results)vote+=res.signals[i]||0;ens+=sgn(vote)*r;}
+  return {oracleMult:Math.exp(oracle), ensMult:Math.exp(ens), capture: oracle? ens/oracle:0};
+}
+
+// ---- WALK-FORWARD VALIDATION (calibrate on 70%, score out-of-sample on 30%) ----
+function walkForward(results,C,H){
+  const n=C.length,split=Math.floor(n*0.7);
+  const cal=results.map(r=>{const bt=backtest(r.signals.slice(0,split),C.slice(0,split),H);
+    if(!bt.n||bt.n<8)return {w:0,mult:0};return {w:Math.abs(bt.hitRate-0.5),mult:bt.hitRate>=0.5?1:-1};});
+  function score(a,b){let hit=0,tot=0;for(let i=a;i<b;i+=H){let vote=0;
+    results.forEach((r,j)=>{vote+=cal[j].w*cal[j].mult*(r.signals[i]||0);});
+    if(vote===0)continue;const real=sgn(C[i+H]-C[i]);if(real===0)continue;tot++;if(sgn(vote)===real)hit++;}
+    return {rate:tot?hit/tot:null,n:tot};}
+  const ins=score(60,split-H), oos=score(split,n-H);
+  return {ins:ins.rate,nIns:ins.n,oos:oos.rate,nOos:oos.n,split};
+}
+
+// ---- NO-LOOK-AHEAD SELF-TEST (signals must not change when future bars are removed) ----
+function selfTest(O,Hh,L,C,V){
+  const n=C.length,cut=n-30;
+  const full=INDICATORS.map(fn=>{try{return fn(O,Hh,L,C,V).signals[cut];}catch(e){return "ERR";}});
+  const sl=a=>a.slice(0,cut+1);
+  const trunc=INDICATORS.map(fn=>{try{const s=fn(sl(O),sl(Hh),sl(L),sl(C),sl(V)).signals;return s[s.length-1];}catch(e){return "ERR";}});
+  let pass=0;const fails=[];
+  for(let i=0;i<INDICATORS.length;i++){if(full[i]===trunc[i])pass++;else fails.push((META[i]||["?"])[0]);}
+  return {pass,total:INDICATORS.length,fails,cut};
+}
+
+function renderForecast(fc,results,C,H){
+  const el=document.getElementById("forecast"); el.style.display="flex";
+  if(!fc.ok){
+    el.className="forecast none";
+    el.innerHTML=`<div class="fclabel">Ensemble forecast · next ${H} bars</div>
+      <div class="fcdir neutral">— NO EDGE DETECTED</div>
+      <div class="fcsub">None of the ${fc.total} indicators currently shows a demonstrated edge (hit-rate &gt;50% with at least 8 trades) over the next ${H} bars on this symbol/timeframe. The honest answer is: no forecast. Try a different symbol, timeframe, or horizon.</div>`;
+    return;
+  }
+  const up=fc.pUp>=0.5, prob=(up?fc.pUp:1-fc.pUp)*100, cls=up?"long":"short";
+  const proj=projectPath(results,C,H), movePct=(Math.exp(proj.muH)-1)*100;
+  el.className="forecast "+cls;
+  el.innerHTML=`<div class="fclabel">Ensemble forecast · next ${H} bars</div>
+    <div class="fcrow">
+      <div class="fcdir ${cls}">${up?"▲":"▼"} ${up?"UP":"DOWN"} ${prob.toFixed(0)}%</div>
+      <div class="fcproj">projected move <b class="${movePct>=0?'pos':'neg'}">${movePct>=0?"+":""}${movePct.toFixed(2)}%</b> · ±${((Math.exp(proj.sigma*Math.sqrt(H))-1)*100).toFixed(1)}% (1σ)</div>
+    </div>
+    <div class="fcbar"><div class="fcmark" style="left:calc(${(fc.pUp*100).toFixed(1)}% - 1.5px)"></div></div>
+    <div class="fcends"><span>DOWN</span><span>50/50</span><span>UP</span></div>
+    <div class="fcchartlabel">Forward projection — solid = last 50 bars · dashed = predicted path · shaded = 1σ / 2σ cone</div>
+    ${projChart(C,proj,H,up)}
+    <div class="fcsub">${fc.voters} of ${fc.total} indicators have a demonstrated edge and vote (${fc.up} lean up · ${fc.down} lean down). Probability is hit-rate-weighted; the projected path extrapolates each voter's edge-weighted historical conditional return, with a volatility cone. A model estimate, not a guarantee. Not financial advice.</div>`;
+}
+
+// Renders the perfect-foresight benchmark, walk-forward validation, and self-test row.
+function renderDiagnostics(results,data,H){
+  const C=data.C;
+  const pf=perfectForesight(results,C,H), wf=walkForward(results,C,H), st=LASTSELFTEST||selfTest(data.O,data.H,data.L,data.C,data.V);
+  const cap=(pf.capture*100);
+  const wfTxt = wf.oos==null ? "—" : (wf.oos*100).toFixed(0)+"% <span class='dmuted'>(n="+wf.nOos+", in-sample "+(wf.ins!=null?(wf.ins*100).toFixed(0)+"%":"—")+")</span>";
+  const stCls = st.fails.length? "red":"green";
+  const stTxt = st.fails.length? (st.pass+"/"+st.total+" — repaint: "+st.fails.join(", ")) : (st.pass+"/"+st.total+" causal ✓");
+  document.getElementById("diag").style.display="grid";
+  document.getElementById("diag").innerHTML=`
+    <div class="dbox"><div class="dlabel">Perfect-foresight benchmark <span class="dmuted">(ceiling, unattainable)</span></div>
+      <div class="dval ${cap>=0?'pos':'neg'}">${cap>=0?"":"−"}${Math.abs(cap).toFixed(0)}%</div>
+      <div class="dsub">of perfect foresight captured. A perfect oracle (always right each ${H} bars) ≈ <b>${pf.oracleMult.toFixed(1)}×</b> over this window; the equal-weight causal ensemble ≈ <b class="${pf.ensMult>=1?'pos':'neg'}">${pf.ensMult.toFixed(2)}×</b>. Near 0% (or negative) means little real directional edge.</div></div>
+    <div class="dbox"><div class="dlabel">Walk-forward (out-of-sample)</div>
+      <div class="dval">${wfTxt}</div>
+      <div class="dsub">Weights & follow/fade calibrated on the oldest 70% of bars, scored on the held-out most-recent 30% the model never saw. 50% = coin-flip.</div></div>
+    <div class="dbox"><div class="dlabel">No-look-ahead self-test</div>
+      <div class="dval"><span class="dot ${stCls}" style="width:13px;height:13px;display:inline-block;vertical-align:middle"></span> ${st.pass}/${st.total}</div>
+      <div class="dsub">${stTxt}. Every indicator recomputed with the last 30 bars deleted; signal at bar ${st.cut} must be unchanged. Proves the signals don't peek ahead.</div></div>`;
+}
+
+let LASTRESULTS=null,LASTDATA=null,LASTSELFTEST=null;
+function renderAll(){
+  if(!LASTRESULTS)return;
+  const H=+document.getElementById("horizon").value, C=LASTDATA.C;
+  renderForecast(computeForecast(LASTRESULTS,C,H),LASTRESULTS,C,H);
+  renderDiagnostics(LASTRESULTS,LASTDATA,H);
+  const tiers=activeTiers();const cont=document.getElementById("sections");cont.innerHTML="";
+  const names={S:"Tier S — the icons",A:"Tier A — heavy hitters",B:"Tier B — widely-used standards"};
+  let nL=0,nS=0,nN=0,sum=0,hitSum=0,hitN=0;
+  ["S","A","B"].forEach(t=>{
+    if(!tiers.includes(t))return;
+    const group=LASTRESULTS.filter(r=>r.tier===t);if(!group.length)return;
+    const cards=group.map(r=>card(r,H)).join("");
+    cont.insertAdjacentHTML("beforeend",`<div class="tierhead">${names[t]}</div><div class="grid">${cards}</div>`);
+  });
+  LASTRESULTS.filter(r=>tiers.includes(r.tier)).forEach(r=>{
+    const d=dirOf(r.score);if(d==="LONG")nL++;else if(d==="SHORT")nS++;else nN++;sum+=r.score;
+    if(r._bt&&r._bt.n>=8){hitSum+=r._bt.hitRate;hitN++;}});
+  const tot=nL+nS+nN||1,avg=Math.round(sum/tot);
+  document.getElementById("consensus").style.display="flex";
+  document.getElementById("nLong").textContent=nL;document.getElementById("nShort").textContent=nS;
+  document.getElementById("nNeutral").textContent=nN;document.getElementById("avgScore").textContent=(avg>0?"+":"")+avg;
+  document.getElementById("avgHit").textContent=hitN?(hitSum/hitN*100).toFixed(0)+"%":"—";
+  const bias=document.getElementById("bias");
+  if(avg>8){bias.textContent="BULLISH";bias.style.background="rgba(39,208,122,.2)";bias.style.color="var(--green)";}
+  else if(avg<-8){bias.textContent="BEARISH";bias.style.background="rgba(255,84,112,.2)";bias.style.color="var(--red)";}
+  else{bias.textContent="MIXED";bias.style.background="rgba(107,119,147,.2)";bias.style.color="var(--neutral)";}
+}
+
+async function run(){
+  const sym=document.getElementById("symbol").value,iv=document.getElementById("interval").value;
+  const btn=document.getElementById("refresh"),err=document.getElementById("error");
+  err.innerHTML="";btn.disabled=true;document.getElementById("updated").innerHTML='<span class="spin"></span> loading…';
+  try{
+    const k=await fetchKlines(sym,iv);
+    const O=k.map(r=>+r[1]),H=k.map(r=>+r[2]),L=k.map(r=>+r[3]),C=k.map(r=>+r[4]),V=k.map(r=>+r[5]);
+    LASTRESULTS=INDICATORS.map((fn,idx)=>{
+      let r;
+      try{ r=fn(O,H,L,C,V); }
+      catch(e){ const m=META[idx]||["?","","?"];
+        r={name:m[0],author:m[1],tier:m[2],score:0,raw:"n/a (insufficient data)",signals:Array(C.length).fill(0)}; }
+      if(!Number.isFinite(r.score)) r.score=0;
+      r._C=C; return r;
+    });
+    LASTDATA={O,H,L,C,V};
+    LASTSELFTEST=selfTest(O,H,L,C,V);   // computed once per load (horizon-independent)
+    renderAll();
+    document.getElementById("price").textContent=sym.replace("USDT","")+" $"+last(C).toLocaleString();
+    document.getElementById("updated").textContent="updated "+new Date().toLocaleTimeString()+" · "+k.length+" bars";
+  }catch(e){
+    err.innerHTML='<div class="err"><b>Could not load data.</b> '+e.message+
+      '. Binance may be geo-blocked on your network — try another network/VPN.</div>';
+    document.getElementById("updated").textContent="error";
+  }finally{btn.disabled=false;}
+}
+
+let timer=null;
+document.getElementById("refresh").onclick=run;
+document.getElementById("symbol").onchange=run;
+document.getElementById("interval").onchange=run;
+document.getElementById("horizon").onchange=renderAll;
+document.querySelectorAll(".tierToggle").forEach(c=>c.onchange=renderAll);
+document.getElementById("auto").onchange=e=>{if(e.target.checked)timer=setInterval(run,60000);else clearInterval(timer);};
+run();
+</script>
+</body>
+</html>
