@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woofles &mdash; Waffles for Dogs | Handmade dog treats at UK fetes</title>
+<meta name="description" content="Woofles makes handmade, all-natural waffles for dogs. Find our stand at fetes and dog shows across the UK, or order a custom batch for birthdays, gotcha days and gifts.">
+<meta name="theme-color" content="#1E8FD5">
+<link rel="icon" href="favicon.png" type="image/png">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Woofles &mdash; Waffles for Dogs">
+<meta property="og:description" content="Handmade, all-natural waffles for dogs. Catch us at UK fetes, or order a custom batch.">
+<meta property="og:image" content="dog-waffle.jpg">
+
+<style>
+  :root{
+    --blue:#1E8FD5;
+    --blue-dark:#136BA6;
+    --orange:#F2921D;
+    --orange-dark:#D97A08;
+    --teal:#2FB6C4;
+    --teal-dark:#1E8F9B;
+    --cream:#FFF8EC;
+    --paper:#FFFFFF;
+    --ink:#243746;
+    --ink-soft:#55697A;
+    --line:#EADFCD;
+    --radius:18px;
+    --shadow:0 10px 30px rgba(36,55,70,.10);
+    --wrap:1120px;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font:17px/1.65 "Trebuchet MS","Segoe UI",Verdana,system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;display:block}
+  a{color:var(--blue-dark)}
+
+  h1,h2,h3,.brand-word{
+    font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;
+    font-weight:800;
+    letter-spacing:.4px;
+    line-height:1.12;
+    margin:0 0 .5em;
+  }
+  h2{font-size:clamp(28px,4vw,40px);color:var(--blue)}
+  h3{font-size:20px}
+
+  .wrap{width:min(100% - 40px,var(--wrap));margin-inline:auto}
+  section{padding:72px 0}
+  .lede{font-size:19px;color:var(--ink-soft);max-width:62ch}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(255,255,255,.95);
+    backdrop-filter:blur(8px);
+    border-bottom:3px solid var(--orange);
+  }
+  .bar{display:flex;align-items:center;gap:16px;padding:10px 0}
+  .logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .logo img{width:52px;height:auto}
+  .brand-word{font-size:26px;color:var(--blue);text-transform:uppercase;margin:0;line-height:1}
+  .brand-sub{display:block;font-size:11.5px;letter-spacing:2.2px;color:var(--orange);text-transform:uppercase;font-weight:700}
+
+  nav{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  nav a{
+    text-decoration:none;color:var(--ink);font-weight:700;font-size:15px;
+    padding:9px 13px;border-radius:999px;
+  }
+  nav a:hover{background:#EAF5FC;color:var(--blue-dark)}
+  nav a.cta{background:var(--orange);color:#fff}
+  nav a.cta:hover{background:var(--orange-dark);color:#fff}
+  .menu-toggle{display:none}
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:inline-block;text-decoration:none;font-weight:800;
+    padding:14px 26px;border-radius:999px;border:3px solid transparent;
+    transition:transform .12s ease, background .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-orange{background:var(--orange);color:#fff}
+  .btn-orange:hover{background:var(--orange-dark)}
+  .btn-ghost{background:#fff;color:var(--blue-dark);border-color:var(--blue)}
+  .btn-ghost:hover{background:#EAF5FC}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:
+      radial-gradient(1000px 420px at 12% -10%, #E7F6FA 0%, rgba(231,246,250,0) 70%),
+      var(--cream);
+    padding:56px 0 64px;
+    border-bottom:1px solid var(--line);
+  }
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+  .hero h1{font-size:clamp(38px,6vw,62px);color:var(--blue);text-transform:uppercase}
+  .hero h1 em{display:block;font-style:normal;color:var(--orange);font-size:.42em;letter-spacing:4px;margin-top:10px}
+  .hero p{font-size:19px;color:var(--ink-soft);max-width:48ch}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px}
+  .hero-photo{
+    border-radius:24px;overflow:hidden;box-shadow:var(--shadow);
+    border:6px solid #fff;transform:rotate(-1.2deg);
+  }
+  .badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;padding:0;list-style:none}
+  .badges li{
+    background:#fff;border:2px solid var(--line);border-radius:999px;
+    padding:7px 15px;font-size:14px;font-weight:700;color:var(--ink-soft);
+  }
+
+  /* ---------- bunting strip ---------- */
+  .strip{background:var(--teal);color:#fff;padding:16px 0;text-align:center;font-weight:700;letter-spacing:.6px}
+  .strip span{display:inline-block;padding:0 14px}
+
+  /* ---------- cards / menu ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;margin-top:36px}
+  .card{
+    background:var(--paper);border:2px solid var(--line);border-radius:var(--radius);
+    padding:26px;box-shadow:var(--shadow);
+  }
+  .card-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+  .card-head h3{flex:1 1 100%}
+  .card h3{color:var(--blue-dark);margin:0 0 10px}
+  .card p{margin:0;color:var(--ink-soft);font-size:16px}
+  .price{
+    flex:0 0 auto;margin-bottom:14px;background:var(--orange);color:#fff;font-weight:800;
+    border-radius:999px;padding:4px 14px;font-size:15px;white-space:nowrap;
+  }
+  .card .tag{
+    display:inline-block;margin-top:14px;font-size:12.5px;font-weight:800;letter-spacing:1px;
+    text-transform:uppercase;color:var(--teal-dark);background:#E6F7F9;border-radius:999px;padding:5px 12px;
+  }
+  .menu-note{margin-top:28px;font-size:15px;color:var(--ink-soft)}
+
+  /* ---------- split sections ---------- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .split img{width:100%;border-radius:var(--radius);box-shadow:var(--shadow);border:6px solid #fff}
+  .alt{background:var(--paper);border-block:1px solid var(--line)}
+
+  ul.ticks{list-style:none;padding:0;margin:22px 0 0}
+  ul.ticks li{position:relative;padding-left:32px;margin-bottom:12px;color:var(--ink-soft)}
+  ul.ticks li::before{
+    content:"";position:absolute;left:0;top:6px;width:18px;height:18px;border-radius:5px;
+    background:var(--teal);
+    box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 4px var(--teal);
+  }
+
+  /* ---------- events ---------- */
+  .events{list-style:none;padding:0;margin:32px 0 0;display:grid;gap:14px}
+  .events li{
+    display:flex;gap:20px;align-items:center;flex-wrap:wrap;
+    background:#fff;border:2px solid var(--line);border-left:8px solid var(--teal);
+    border-radius:14px;padding:18px 22px;
+  }
+  .events .when{font-weight:800;color:var(--blue);min-width:150px}
+  .events .what{font-weight:700}
+  .events .where{color:var(--ink-soft);font-size:15px}
+
+  /* ---------- steps ---------- */
+  .steps{counter-reset:step;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;margin-top:36px}
+  .step{background:#fff;border:2px solid var(--line);border-radius:var(--radius);padding:26px 24px 24px;position:relative}
+  .step::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;top:-18px;left:24px;width:38px;height:38px;border-radius:50%;
+    background:var(--blue);color:#fff;font-weight:800;display:grid;place-items:center;font-size:18px;
+  }
+  .step h3{margin-top:10px;color:var(--blue-dark)}
+  .step p{margin:0;color:var(--ink-soft);font-size:16px}
+
+  /* ---------- FAQ ---------- */
+  details{
+    background:#fff;border:2px solid var(--line);border-radius:14px;
+    padding:18px 22px;margin-bottom:12px;
+  }
+  details summary{font-weight:800;cursor:pointer;color:var(--blue-dark);list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";float:right;color:var(--orange);font-size:22px;line-height:1}
+  details[open] summary::after{content:"\2013"}
+  details p{margin:12px 0 0;color:var(--ink-soft);font-size:16px}
+
+  /* ---------- contact ---------- */
+  .contact{background:var(--blue);color:#fff}
+  .contact h2{color:#fff}
+  .contact .lede{color:#DCF0FB}
+  .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:30px}
+  .contact-card{background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);border-radius:var(--radius);padding:26px}
+  .contact-card h3{color:#fff}
+  .contact-card a{color:#fff;font-weight:700}
+  .contact-list{list-style:none;padding:0;margin:0}
+  .contact-list li{margin-bottom:14px;font-size:16px}
+  .contact-list strong{display:block;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#BEE4F8}
+
+  form label{display:block;font-weight:700;font-size:14px;margin:0 0 6px}
+  form input,form textarea,form select{
+    width:100%;padding:12px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.4);
+    background:rgba(255,255,255,.95);color:var(--ink);font:inherit;font-size:16px;margin-bottom:16px;
+  }
+  form textarea{min-height:120px;resize:vertical}
+  form button{
+    background:var(--orange);color:#fff;border:0;font:inherit;font-weight:800;
+    padding:14px 28px;border-radius:999px;cursor:pointer;
+  }
+  form button:hover{background:var(--orange-dark)}
+  .form-note{font-size:13.5px;color:#CDE8F8;margin-top:12px}
+  .form-note a{color:#fff}
+
+  /* ---------- footer ---------- */
+  footer{background:#12384F;color:#C9DDE9;padding:44px 0 34px;font-size:15px}
+  footer .foot{display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  footer a{color:#fff}
+  footer .small{font-size:13px;color:#8FAEC1;margin-top:18px}
+
+  @media (max-width:760px){
+    .bar{flex-wrap:wrap;gap:8px;padding:10px 0 6px}
+    .logo{flex:1 1 auto}
+    .brand-sub{white-space:nowrap}
+    nav{margin-left:0;flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;
+        padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{flex:0 0 auto;white-space:nowrap}
+  }
+
+  @media (max-width:860px){
+    section{padding:56px 0}
+    .hero-grid,.split,.contact-grid{grid-template-columns:1fr;gap:32px}
+    .hero-photo{transform:none}
+    .split .split-media{order:-1}
+    nav{gap:2px}
+    nav a{padding:8px 10px;font-size:14px}
+    .brand-word{font-size:22px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#top">
+      <img src="mascot.png" alt="Woofles mascot: a happy golden dog holding a waffle">
+      <span>
+        <span class="brand-word">Woofles</span>
+        <span class="brand-sub">Waffles for dogs</span>
+      </span>
+    </a>
+    <nav>
+      <a href="#menu">Menu</a>
+      <a href="#custom">Custom orders</a>
+      <a href="#events">Find us</a>
+      <a href="#faq">FAQs</a>
+      <a class="cta" href="#contact">Get in touch</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Waffles<em>Made for dogs</em></h1>
+        <p>Freshly pressed, all&#8209;natural waffles baked in small batches for the good boys and girls of Britain. Catch our little stand at village fetes and dog shows &mdash; or order a custom batch for a birthday, gotcha day or a very spoiled pup.</p>
+        <div class="hero-actions">
+          <a class="btn btn-orange" href="#custom">Order a custom batch</a>
+          <a class="btn btn-ghost" href="#events">Where we&rsquo;ll be</a>
+        </div>
+        <ul class="badges">
+          <li>&#127838; Baked fresh on the day</li>
+          <li>&#128062; Dog&#8209;safe ingredients only</li>
+          <li>&#127468;&#127463; Made in the UK</li>
+        </ul>
+      </div>
+      <div class="hero-photo">
+        <img src="dog-waffle.jpg" alt="A golden retriever in a Woofles bandana being handed a fresh waffle at the stand" width="697" height="768">
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <span>Fetes &amp; dog shows</span>&bull;<span>Custom orders</span>&bull;<span>Party &amp; gift boxes</span>&bull;<span>No salt, no sugar, no nasties</span>
+  </div>
+
+  <!-- MENU -->
+  <section id="menu">
+    <div class="wrap">
+      <h2>The menu</h2>
+      <p class="lede">Everything is pressed to order on the stand, cooled on the rack, and served warm in a compostable tray. Human&#8209;friendly? Perfectly safe &mdash; just a bit bland for your tastes.</p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-head"><h3>The Original Woofle</h3><span class="price">&pound;2.00</span></div>
+          <p>Our house recipe &mdash; oat and banana, lightly pressed until golden. The one every dog comes back for.</p>
+          <span class="tag">Best seller</span>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Peanut Butter Pup&#8209;Perfect</h3><span class="price">&pound;4.00</span></div>
+          <p>Stirred through with xylitol&#8209;free peanut butter and finished with a drizzle on top. Worth every wag.</p>
+          <span class="tag">Xylitol free</span>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Bacon Bite Bliss</h3><span class="price">&pound;4.50</span></div>
+          <p>Crisped bacon bits folded into the batter for the dog who has decided today is a celebration.</p>
+          <span class="tag">Big occasion</span>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Pup Cup Box of 4</h3><span class="price">&pound;6.00</span></div>
+          <p>A mixed box to take home, boxed with a ribbon. Keeps for five days in an airtight tub, or freeze for a month.</p>
+          <span class="tag">Takeaway</span>
+        </div>
+      </div>
+
+      <p class="menu-note">Prices shown are stand prices and may vary by event. Card and cash both welcome. Ingredient lists for every recipe are on the stand &mdash; just ask, especially if your dog has allergies.</p>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="alt">
+    <div class="wrap split">
+      <div>
+        <h2>A tiny stand with a very good queue</h2>
+        <p class="lede">Woofles started in a home kitchen with one waffle iron and a dog who was extremely interested in what was happening. These days we load the cart into the van most weekends and set up wherever there are dogs to feed.</p>
+        <ul class="ticks">
+          <li>Small batches, made by hand &mdash; nothing mass produced.</li>
+          <li>Simple ingredients you could read out loud: oats, banana, egg, peanut butter.</li>
+          <li>No salt, no added sugar, no chocolate, no xylitol, no artificial nasties.</li>
+          <li>Compostable trays and paper bags, because fields should stay tidy.</li>
+        </ul>
+      </div>
+      <div class="split-media">
+        <img src="the-stand.jpg" alt="The Woofles waffle cart set up at a village fete with bunting and a menu board" width="692" height="511">
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENTS -->
+  <section id="events">
+    <div class="wrap">
+      <h2>Where to find us</h2>
+      <p class="lede">We pop up at village fetes, summer fairs, dog shows and charity fun days across the UK. Dates for the current season are below &mdash; drop us a message if you&rsquo;d like us at yours.</p>
+
+      <ul class="events">
+        <li>
+          <span class="when">Sat 12 Sept</span>
+          <span class="what">Village Summer Fete</span>
+          <span class="where">Recreation Ground &mdash; 10am to 4pm</span>
+        </li>
+        <li>
+          <span class="when">Sun 27 Sept</span>
+          <span class="what">Charity Dog Show &amp; Fun Day</span>
+          <span class="where">Memorial Park &mdash; 11am to 3pm</span>
+        </li>
+        <li>
+          <span class="when">Sat 17 Oct</span>
+          <span class="what">Autumn Country Market</span>
+          <span class="where">Market Square &mdash; 9am to 2pm</span>
+        </li>
+        <li>
+          <span class="when">Sat 5 Dec</span>
+          <span class="what">Christmas Fair</span>
+          <span class="where">Village Hall Green &mdash; 12pm to 6pm</span>
+        </li>
+      </ul>
+
+      <p class="menu-note"><strong>Booking a fete, fair or show?</strong> We bring our own cart, gazebo, power and public liability insurance. <a href="#contact">Send us the details</a> and we&rsquo;ll check the diary.</p>
+    </div>
+  </section>
+
+  <!-- CUSTOM ORDERS -->
+  <section id="custom" class="alt">
+    <div class="wrap">
+      <h2>Custom orders</h2>
+      <p class="lede">Birthdays, gotcha days, adoption days, puppy parties, or a hamper for a friend who talks about their dog a lot. We bake to order and can add a name in dog&#8209;safe icing.</p>
+
+      <div class="steps">
+        <div class="step">
+          <h3>Tell us about the dog</h3>
+          <p>Occasion, date, how many waffles, and anything they can&rsquo;t eat. Photos of the guest of honour are actively encouraged.</p>
+        </div>
+        <div class="step">
+          <h3>We confirm and quote</h3>
+          <p>You&rsquo;ll get a price and a date back, usually within 24 hours. Boxes of 6 start at &pound;9.</p>
+        </div>
+        <div class="step">
+          <h3>Baked fresh</h3>
+          <p>Made the day before or the morning of, boxed and ribboned, ready for collection or local delivery.</p>
+        </div>
+      </div>
+
+      <p class="menu-note">Please give us at least a week&rsquo;s notice where you can &mdash; and a fortnight for anything over 20 waffles.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <h2>Frequently woofed questions</h2>
+      <div style="margin-top:30px">
+        <details open>
+          <summary>Are they actually safe for dogs?</summary>
+          <p>Yes. Every recipe is built from dog&#8209;safe ingredients &mdash; oats, banana, egg and xylitol&#8209;free peanut butter &mdash; with no salt, added sugar, chocolate, raisins or artificial sweeteners. They are treats though, so they should sit inside your dog&rsquo;s daily treat allowance rather than replacing meals.</p>
+        </details>
+        <details>
+          <summary>My dog has allergies. Can you work around them?</summary>
+          <p>Usually, yes. Grain&#8209;free and peanut&#8209;free versions are available on custom orders. Everything is baked in a home kitchen that handles wheat, egg and peanuts, so we can&rsquo;t promise zero cross&#8209;contact &mdash; tell us about severe allergies and we&rsquo;ll be straight with you about what we can do.</p>
+        </details>
+        <details>
+          <summary>How long do they keep?</summary>
+          <p>Five days in an airtight container, or up to a month in the freezer. Defrost at room temperature for an hour &mdash; no need to reheat.</p>
+        </details>
+        <details>
+          <summary>Can I eat one?</summary>
+          <p>You can, and people do. They&rsquo;re unsalted and unsweetened, so expect &ldquo;wholesome&rdquo; rather than &ldquo;brunch&rdquo;.</p>
+        </details>
+        <details>
+          <summary>Do you deliver?</summary>
+          <p>We deliver locally for custom orders and offer collection at any event we&rsquo;re trading at. Get in touch with your postcode and we&rsquo;ll let you know.</p>
+        </details>
+        <details>
+          <summary>Can you come to our event?</summary>
+          <p>We&rsquo;d love to. We&rsquo;re fully self&#8209;contained &mdash; cart, gazebo, power and public liability insurance &mdash; and we cover fetes, shows, markets and charity days. Send us the date, location and expected footfall.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="contact">
+    <div class="wrap">
+      <h2>Get in touch</h2>
+      <p class="lede">Custom order, event booking or just a question about ingredients &mdash; we answer everything, usually within a day.</p>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Say hello</h3>
+          <ul class="contact-list">
+            <li><strong>Email</strong><a href="mailto:hello@wooflewaffles.co.uk">hello@wooflewaffles.co.uk</a></li>
+            <li><strong>Phone / WhatsApp</strong><a href="tel:+447000000000">07000 000 000</a></li>
+            <li><strong>Social</strong>@wooflewaffles on Instagram &amp; Facebook</li>
+            <li><strong>Based in</strong>The UK &mdash; travelling to fetes nationwide</li>
+          </ul>
+        </div>
+
+        <div>
+          <form action="mailto:hello@wooflewaffles.co.uk" method="post" enctype="text/plain">
+            <label for="name">Your name</label>
+            <input id="name" name="name" type="text" placeholder="Jane Smith" required>
+
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="jane@example.com" required>
+
+            <label for="topic">What&rsquo;s this about?</label>
+            <select id="topic" name="topic">
+              <option>Custom order</option>
+              <option>Booking us for an event</option>
+              <option>Ingredients &amp; allergies</option>
+              <option>Something else</option>
+            </select>
+
+            <label for="message">Message</label>
+            <textarea id="message" name="message" placeholder="Tell us about the dog, the date, and how many waffles you need." required></textarea>
+
+            <button type="submit">Send message</button>
+            <p class="form-note">This form opens your email app. Prefer to write to us directly? <a href="mailto:hello@wooflewaffles.co.uk">hello@wooflewaffles.co.uk</a></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="mascot.png" alt="" width="44" style="width:44px">
+        <div>
+          <div style="font-weight:800;color:#fff;font-size:18px;letter-spacing:.5px">WOOFLES</div>
+          <div style="font-size:12px;letter-spacing:2px;color:var(--orange);text-transform:uppercase">Waffles for dogs</div>
+        </div>
+      </div>
+      <div>
+        <a href="#menu">Menu</a> &nbsp;&bull;&nbsp;
+        <a href="#events">Find us</a> &nbsp;&bull;&nbsp;
+        <a href="#custom">Custom orders</a> &nbsp;&bull;&nbsp;
+        <a href="mailto:hello@wooflewaffles.co.uk">Email us</a>
+      </div>
+    </div>
+    <p class="small">&copy; <span id="yr">2025</span> Woofles &mdash; Waffles for Dogs. Handmade in the UK. Treats are for dogs and should form part of a balanced diet; always supervise your dog while they eat.</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
