@@ -1,7 +1,28 @@
 # Woofles — Waffles for Dogs
 
-A single-page static site for the Woofles waffle stand. No build step, no
-dependencies — just HTML, CSS and four images.
+A single-page static site for the Woofles waffle stand. No build step and no
+JavaScript framework — just HTML, CSS, four images and an inline SVG icon set.
+
+The only external request is Google Fonts (Plus Jakarta Sans for headings,
+Quicksand for body). If a visitor can't reach Google Fonts the page falls back
+to Trebuchet MS and still looks fine. To remove the dependency entirely,
+download both families into this folder and swap the `<link>` for `@font-face`
+rules.
+
+## Design system
+
+Tokens live in the `:root` block at the top of `index.html`:
+
+- **Surfaces** — a warm cream ladder from `--surface` (#FFF9EF) to
+  `--surface-variant` (#E8E2D6)
+- **Brand** — `--honey` #FFD27D, `--orange` #F2921D (signage), `--blue` #1E8FD5
+  (wordmark), `--teal` #006972, `--caramel` #8C5000 for text on honey
+- **Ink** — `--bark` #243746 for headings, `--ink-soft` #544435 for body
+- **Shape** — radii from 16px to 48px; warm brown-tinted shadows
+
+Motion is opt-out: everything respects `prefers-reduced-motion`, and the
+scroll-reveal only hides content once JavaScript has confirmed it can reveal
+it again.
 
 ## Files
 
