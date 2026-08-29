@@ -13,6 +13,7 @@ dependencies — just HTML, CSS and four images.
 | `mascot.png` | Cut-out logo mascot (header + footer) |
 | `favicon.png` | Browser tab icon |
 | `woofles-stand.jpg` | Original source artwork (not used by the page — safe to delete) |
+| `deploy.sh` | One-command deploy to an S3 website bucket |
 
 ## Hosting on S3
 
@@ -26,11 +27,15 @@ dependencies — just HTML, CSS and four images.
    Origin Access Control, which is the tidier option if you want HTTPS and a
    custom domain.
 
-Uploading from the CLI:
+Or just run the included script, which does all three steps for you:
 
 ```sh
-aws s3 sync . s3://YOUR-BUCKET --exclude "README.md" --exclude "woofles-stand.jpg" --delete
+./deploy.sh my-woofles-bucket eu-west-2
 ```
+
+It creates the bucket if needed, sets the public-read policy, turns on website
+hosting, and uploads with sensible cache headers. Re-run it any time you change
+the page.
 
 ## Things to change before going live
 
