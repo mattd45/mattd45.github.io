@@ -33,7 +33,8 @@ Out of scope threats: a determined local attacker with physical access; targeted
 ## 4. Scope
 
 ### 4.1 In scope
-- Hardware: Raspberry Pi 4 or 5, **4GB RAM minimum** (ClamAV needs ~1GB), official PSU, boot from a USB SSD (preferred) or high-endurance MicroSD, plus a spare pre-flashed boot device.
+- Hardware: **Raspberry Pi 5, 8GB RAM** (4GB is the minimum; ClamAV needs ~1GB), official 27W PSU, active cooler/fan case, micro-HDMI cable, monitor, USB mouse and keyboard, a small UPS/surge protector (power loss is the main cause of storage corruption), boot from a **USB SSD (preferred, 128-256GB)** or a high-endurance 64GB MicroSD (A1/A2, bought from a trusted retailer to avoid counterfeits), plus a spare pre-flashed boot device.
+- Input: **mouse-only interaction.** All UI targets are large click targets; no touch gestures, drag-and-drop, double-click or right-click required for any core task.
 - OS: Raspberry Pi OS (Desktop), hardened.
 - Accounts: standard non-sudo `grandma`; separate `admin` account (strong password, key/remote only).
 - Apps: Gmail and Facebook (Firefox ESR kiosk windows), LibreOffice Writer (macros disabled), Documents folder, printing, Help.
@@ -163,7 +164,7 @@ Goal: easy and pleasant. Calm, warm, high-contrast, large text, plain words.
 ## 10. Open Items / Placeholders
 - Printer make/model (USB) - determines driver path.
 - [ADMIN_NAME] and [ADMIN_PHONE] for Help page and card.
-- User's vision/hearing/dexterity needs (font size, mouse vs touch, monitor size).
-- Pi 4 vs 5 and SSD vs MicroSD hardware choice.
+- User's vision/hearing needs and monitor size (input is decided: mouse).
+- SSD vs MicroSD final choice (SSD recommended).
 - Exact outbound firewall rules and Facebook/Gmail domain list (derive in prototype).
 - Verify Pi Connect admin-escalation approach on a test device.
