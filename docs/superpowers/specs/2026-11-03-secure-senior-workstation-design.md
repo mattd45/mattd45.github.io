@@ -33,7 +33,7 @@ Out of scope threats: a determined local attacker with physical access; targeted
 ## 4. Scope
 
 ### 4.1 In scope
-- Hardware: **Raspberry Pi 5, 8GB RAM** (4GB is the minimum; ClamAV needs ~1GB), official 27W PSU, active cooler/fan case, micro-HDMI cable, monitor, USB mouse and keyboard, a small UPS/surge protector (power loss is the main cause of storage corruption), boot from a **USB SSD (preferred, 128-256GB)** or a high-endurance 64GB MicroSD (A1/A2, bought from a trusted retailer to avoid counterfeits), plus a spare pre-flashed boot device.
+- Hardware: **Raspberry Pi 5, 4GB RAM** (the minimum; ClamAV needs ~1GB, so the build must verify memory headroom and use zram/swap on the SSD), official 27W PSU, active cooler/fan case, micro-HDMI cable. Existing monitor, USB mouse and keyboard are reused, as is an existing surge protector (a UPS is optional; power loss is the main cause of storage corruption). Boot from a **USB SSD (preferred, 128-256GB)** or a high-endurance 64GB MicroSD (A1/A2, bought from a trusted retailer to avoid counterfeits), plus a spare pre-flashed boot device.
 - Input: **mouse-only interaction.** All UI targets are large click targets; no touch gestures, drag-and-drop, double-click or right-click required for any core task.
 - OS: Raspberry Pi OS (Desktop), hardened.
 - Accounts: standard non-sudo `grandma`; separate `admin` account (strong password, key/remote only).
@@ -166,5 +166,6 @@ Goal: easy and pleasant. Calm, warm, high-contrast, large text, plain words.
 - [ADMIN_NAME] and [ADMIN_PHONE] for Help page and card.
 - User's vision/hearing needs and monitor size (input is decided: mouse).
 - SSD vs MicroSD final choice (SSD recommended).
+- Existing monitor's input (needs HDMI or an adapter) and size.
 - Exact outbound firewall rules and Facebook/Gmail domain list (derive in prototype).
 - Verify Pi Connect admin-escalation approach on a test device.
