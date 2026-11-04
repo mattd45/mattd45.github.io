@@ -16,23 +16,26 @@ DNSOverTLS=opportunistic
 CONF
 run systemctl enable --now systemd-resolved
 
-# Her home Wi-Fi, saved so the laptop joins it on delivery day.
-if [ -n "${WIFI_SSID:-}" ]; then
-  uuid="$(uuidgen --sha1 --namespace @dns --name "$WIFI_SSID" 2>/dev/null || echo 00000000-0000-0000-0000-000000000000)"
-  write_file "/etc/NetworkManager/system-connections/home-wifi.nmconnection" 0600 <<CONN
+# Saved Wi-Fi: her home network, plus the admin's phone hotspot as a fallback, so the laptop can
+# still reach Tailscale if her Wi-Fi fails on delivery day (turn the hotspot on, fix hers remotely).
+add_wifi() {  # SSID PSK FILE-NAME PRIORITY
+  local ssid="$1" psk="$2" file="$3" prio="$4" uuid
+  uuid="$(uuidgen --sha1 --namespace @dns --name "$ssid" 2>/dev/null || echo 00000000-0000-0000-0000-000000000000)"
+  write_file "/etc/NetworkManager/system-connections/${file}.nmconnection" 0600 <<CONN
 [connection]
-id=${WIFI_SSID}
+id=${ssid}
 uuid=${uuid}
 type=wifi
 autoconnect=true
+autoconnect-priority=${prio}
 
 [wifi]
 mode=infrastructure
-ssid=${WIFI_SSID}
+ssid=${ssid}
 
 [wifi-security]
 key-mgmt=wpa-psk
-psk=${WIFI_PSK:-}
+psk=${psk}
 
 [ipv4]
 method=auto
@@ -40,10 +43,10 @@ method=auto
 [ipv6]
 method=auto
 CONN
-  run_ok nmcli connection reload
-else
-  log "WIFI_SSID not set; skipping Wi-Fi profile"
-fi
+}
+if [ -n "${WIFI_SSID:-}" ]; then add_wifi "$WIFI_SSID" "${WIFI_PSK:-}" home-wifi 10; else log "WIFI_SSID not set; skipping home Wi-Fi"; fi
+if [ -n "${HOTSPOT_SSID:-}" ]; then add_wifi "$HOTSPOT_SSID" "${HOTSPOT_PSK:-}" admin-hotspot 0; fi
+run_ok nmcli connection reload
 
 # Firewall: nothing in; out only web, DNS, time, DHCP and Tailscale.
 run ufw --force reset

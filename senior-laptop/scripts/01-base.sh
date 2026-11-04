@@ -11,6 +11,7 @@ run apt-get install -y sudo snapper btrfs-progs unattended-upgrades greetd
 id grandma >/dev/null 2>&1 || run useradd -m -s /bin/bash -c "${HER_NAME:-Grandma}" grandma
 id admin >/dev/null 2>&1 || run useradd -m -s /bin/bash -G sudo admin
 run_ok gpasswd -d grandma sudo
+run chmod 0700 /home/admin /home/grandma
 run passwd -l root
 
 # Services she must not have.
