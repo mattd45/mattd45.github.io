@@ -14,10 +14,13 @@ run_ok sysctl --system
 
 # Mounts: replace or append each line in the template.
 uuid="$(findmnt -no UUID / 2>/dev/null || echo ROOTUUID)"
+guid="$(id -u grandma 2>/dev/null || echo 1000)"
+run install -d -o grandma -g grandma -m 0700 /home/grandma/.cache
 run install -d -m 0750 /var/lib/senior-laptop/quarantine
 while read -r line; do
   case "$line" in ''|'#'*) continue ;; esac
   line="${line//@ROOTUUID@/$uuid}"
+  line="${line//@GRANDMA_UID@/$guid}"
   mp="$(awk '{print $2}' <<<"$line")"
   if [ "$DRY_RUN" = 1 ]; then echo "+ fstab: $line"; continue; fi
   if awk -v mp="$mp" '$1 !~ /^#/ && $2==mp {f=1} END{exit !f}' /etc/fstab; then

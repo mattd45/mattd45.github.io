@@ -6,7 +6,7 @@ set -euo pipefail
 require_root
 KIT="${SENIOR_LAPTOP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 
-run apt-get install -y sway python3-gi gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 wtype \
+run apt-get install -y --no-install-recommends sway swaybg python3-gi gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 wtype \
   wireplumber pipewire-audio fonts-dejavu fonts-noto-color-emoji adwaita-icon-theme
 
 run install -d -m 0755 /opt/senior-laptop/shell

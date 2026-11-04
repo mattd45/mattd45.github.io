@@ -16,7 +16,7 @@ SYSCTL_MIN = {
 }
 BLACKLIST = ["firewire-core", "thunderbolt", "usb-storage", "uas",
              "cramfs", "freevxfs", "hfs", "hfsplus", "jffs2", "dccp", "sctp", "rds", "tipc"]
-NOEXEC_MOUNTS = ["/tmp", "/home", "/var/lib/senior-laptop/quarantine"]
+NOEXEC_MOUNTS = ["/tmp", "/home", "/var/lib/senior-laptop/quarantine", "/home/grandma/.cache"]
 
 
 def read(name: str) -> list[str]:
