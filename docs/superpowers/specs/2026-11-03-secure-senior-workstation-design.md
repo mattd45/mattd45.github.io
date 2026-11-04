@@ -15,6 +15,7 @@ Design, provision and deploy a locked-down, single-purpose computing appliance f
 - The administrator can connect remotely after any reboot.
 - A bad update or breakage can be rolled back; the device can be rebuilt from a script in under an hour.
 - Her writing lives in Google Drive (Docs), so there is no local document store to lose.
+- It arrives ready to use: plug in, press power, no setup by her.
 - She finds it easy and pleasant to use with no training (section 7).
 
 ## 2. Threat Model
@@ -42,6 +43,9 @@ Out of scope: a determined attacker with long-term physical access; targeted nat
 - **Network:** restrictive firewall, filtering DNS, remote management via Tailscale (SSH) and RustDesk (screen).
 - **Printing:** CUPS, USB printer (model TBD).
 - **Google account security:** 2-step verification with admin-managed recovery.
+
+### 4.1a Delivered ready to use
+The laptop is fully set up and tested before delivery: her home Wi-Fi is saved, Gmail and Facebook are already signed in (2-step verification set up by the administrator), her printer is installed and tested, her old Windows files are in Google Drive, remote access is joined, and the printed card is with it. On delivery day she presses the power button and arrives at Home.
 
 ### 4.2 Out of scope
 - Windows apps / `.exe` / `.msi`; local office suite.
@@ -141,8 +145,8 @@ Out of scope: a determined attacker with long-term physical access; targeted nat
 2. **High contrast:** dark text on a light background.
 3. **Few choices:** Home shows five big tiles and nothing else: Email, Facebook, Write a Letter, My Downloads, Help.
 4. **Plain words and a picture on every button,** in her own words ("Write a Letter", not "Documents").
-5. **One click for everything.** Double-clicks are ignored so they can't do things twice.
-6. **Same layout everywhere.** A bottom bar is always visible: Back, Home, Print, Volume, Help.
+5. **One click for everything.** She is used to Windows and double-clicks icons, so a double-click works but opens only one window. Right-click does nothing.
+6. **Familiar from Windows, same layout everywhere.** A bottom bar like the Windows taskbar is always visible: Home at the far left (where Start is), Back, Print, Volume and Help in the middle, and the clock at the right. Pressing Home closes the open app and returns to Home, like closing a window. Ctrl+C, Ctrl+V, Ctrl+Z and other editing shortcuts she already knows keep working.
 7. **Nothing happens unasked.** No update prompts, pop-ups or cookie banners. Messages are large, calm, in plain words, and go away on click.
 8. **Hard to break.** Home always gets her back to the start. Turning off asks once ("Turn off" / "Keep working").
 9. **Orientation:** Home shows a greeting with her name and the date and time in large type.
@@ -181,6 +185,8 @@ A small custom shell (Home screen, bottom bar, plain-language messages, Help scr
 - Usability test with her passes (section 7.3).
 
 ## 10. Open Items / Placeholders
+- Before delivery: her home Wi-Fi name and password; her Gmail and Facebook logins and a way to receive 2-step codes; the printer itself (or its model); what is on her old Windows computer that needs moving to Google Drive.
+- How the administrator reaches a local admin login on the machine (needed if Wi-Fi fails on delivery day), given console switching is removed.
 - Confirm the laptop's spare RAM slot and Wi-Fi chip (Linux support) before or at purchase.
 - Printer make/model (USB).
 - {ADMIN_NAME} and {ADMIN_PHONE}.

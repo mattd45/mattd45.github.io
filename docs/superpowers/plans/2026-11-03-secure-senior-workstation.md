@@ -24,6 +24,7 @@
 - Mounts: `noexec,nosuid,nodev` on `/tmp`, `/home` and download dirs. Boot clears browser cache and temp files; logins and Downloads persist.
 - Downloads: quarantine -> ClamAV scan + MIME check -> `~grandma/Downloads`. Allowed: PDF, DOC/DOCX, JPG/PNG, TXT; everything else deleted (infected/disallowed) or held (scanner unavailable).
 - Updates: unattended security upgrades with a snapper snapshot before each; nightly reboot at 04:00; health-check heartbeat every 5 minutes.
+- Delivery: fully pre-configured before handover (her Wi-Fi saved, Gmail and Facebook signed in with 2-step verification, printer working, files in Drive, Tailscale joined); 48-hour bench burn-in with no alerts.
 - UI: Home tiles = Email, Facebook, Write a Letter (Google Docs), My Downloads, Help. Bottom bar = Back, Home, Print, Volume, Help. Block page text: "That page isn't available. Tap Help and {ADMIN_NAME} will sort it out." Placeholders `{ADMIN_NAME}`, `{ADMIN_PHONE}` from `config.env`.
 - Usability (spec 7.1): shell text >= 28px, tile labels 40px, buttons >= 72px; single-click only (double-clicks ignored for 600ms); one confirmation for turning off; no unsolicited prompts; all user-facing text in `shell/copy.py` in plain words.
 - Audit targets: Lynis hardening index >= 80; `nmap` of LAN and tailnet addresses shows no open ports.
@@ -44,7 +45,7 @@
 
 ```
 senior-laptop/
-  config.env.example          # ADMIN_NAME, ADMIN_PHONE, HEALTHCHECK_URL, TAILSCALE_AUTHKEY, PRINTER_NAME
+  config.env.example          # ADMIN_NAME, ADMIN_PHONE, HER_NAME, WIFI_SSID, WIFI_PSK, HEALTHCHECK_URL, TAILSCALE_AUTHKEY, PRINTER_NAME
   provision.sh                # runs scripts/NN-*.sh in order
   scripts/01-base.sh 02-network.sh 03-remote.sh 04-hardening.sh 05-browser.sh
           06-airlock.sh 07-desktop.sh 08-printing-usb.sh 09-updates-monitoring.sh
@@ -80,7 +81,7 @@ senior-laptop/
 
 **Interfaces:** Produces the values Task 7 uses: tile labels and icons, bar buttons, size values (body 28px, tiles 40px, buttons 72px) and the short list of plain-language messages (offline, printer needs paper or ink, new device blocked, download checked and safe, sent to the printer, turn off confirmation, help).
 
-- [ ] **Step 1: Observe her:** note what she does on her computer today, whether she double-clicks, which text size is comfortable (print a sample at 24/28/36pt), pointer speed, her name and the words she uses for things.
+- [ ] **Step 1: Observe her:** note what she does on her computer today and her Windows habits (double-clicking icons, the X to close, Ctrl+C/V, right-click, the Start menu), whether she double-clicks, which text size is comfortable (print a sample at 24/28/36pt), pointer speed, her name and the words she uses for things.
 - [ ] **Step 2: Write `ux-spec.md`** with the five tiles, the bottom bar, the size values and the message wording, following spec section 7.1.
 - [ ] **Step 3: Show her a picture of Home** and ask where she'd click to read email, open Facebook, write a letter, print it and get help. Adjust labels or icons until she picks right each time.
 - [ ] **Step 4: Commit** `docs: UX spec`.
@@ -105,7 +106,7 @@ senior-laptop/
 
 - [ ] **Step 1: Write checks:** `ufw status verbose` contains `Default: deny (incoming)`; `ss -tlnp` shows no non-loopback listeners (Tailscale SSH excluded); `resolvectl status` shows `9.9.9.9`; `tailscale status` shows the device online; admin can `tailscale ssh admin@<host>` from another machine (manual step).
 - [ ] **Step 2: Run; expected FAIL.**
-- [ ] **Step 3: Implement.** Outgoing: allow 80/443, 53, 123, Tailscale and RustDesk requirements, health-check host; default deny outgoing last. RustDesk spike: confirm unattended screen access works over the tailnet; if not, document the chosen alternative.
+- [ ] **Step 3: Implement.** Pre-load her home Wi-Fi (NetworkManager profile from `WIFI_SSID`/`WIFI_PSK`, autoconnect). Outgoing: allow 80/443, 53, 123, Tailscale and RustDesk requirements, health-check host; default deny outgoing last. RustDesk spike: confirm unattended screen access works over the tailnet; if not, document the chosen alternative.
 - [ ] **Step 4: Re-run; expected PASS.** Reboot and confirm SSH and screen access without anyone logging in manually.
 - [ ] **Step 5: Commit** `feat: firewall, filtering DNS, remote access`.
 
@@ -165,11 +166,11 @@ senior-laptop/
 - `def printer_message() -> str | None`: maps CUPS reasons (`media-empty`, `marker-supply-low`, `offline`) to `COPY["printer_paper_ink"]` etc.
 - `def usb_blocked_message() -> str | None`: `COPY["new_device_blocked"]` when USBGuard has blocked an input device.
 - `class ClickDebouncer(window_ms: int = 600)` with `accept(now_ms: int) -> bool`: false for a second click inside the window.
-- Compositor: `sway`; all windows maximized, no decorations, window-closing and fullscreen shortcuts (Ctrl+W, Ctrl+Q, Alt+F4, F11) removed.
+- Compositor: `sway`; all windows maximized, no decorations, window-closing and fullscreen shortcuts (Ctrl+W, Ctrl+Q, Alt+F4, F11) removed; Ctrl+C/V/X/Z/A and other editing shortcuts keep working.
 
 - [ ] **Step 1: Write failing tests in `tests/test_shell.py`:** `load_tiles` returns exactly the five labels in order with non-empty commands; `ClickDebouncer` accepts the first click, rejects a second at +300ms and accepts one at +700ms; `connectivity_message`, `printer_message` and `usb_blocked_message` return the `COPY` strings for stubbed states.
 - [ ] **Step 2: Run `pytest tests/test_shell.py`; expected FAIL.**
-- [ ] **Step 3: Implement** to the interfaces. Home: greeting with her name (from `config.env`), large date and time, five tiles, and a "Turn off" button that asks once ("Turn off" / "Keep working"). Bottom bar: Back, Home, Print, Volume (- and +), Help, always visible. Print sends Ctrl+P with Firefox set to print silently to the default printer, then shows `COPY["print_sent"]`. Help shows `{ADMIN_NAME}`, `{ADMIN_PHONE}` and "Connected for support" (Tailscale online). Messages are large and go away on click. Email opens the Google kiosk window at Gmail; Write a Letter opens it at Docs; Facebook opens its own profile; My Downloads opens a Downloads-only viewer; a tile focuses an existing window instead of opening a second one.
+- [ ] **Step 3: Implement** to the interfaces. Home: greeting with her name (from `config.env`), large date and time, five tiles, and a "Turn off" button that asks once ("Turn off" / "Keep working"). Bottom bar laid out like the Windows taskbar and always visible: Home at the far left, then Back, Print, Volume (- and +) and Help, with the clock at the right; Home closes the open app. A double-click on a tile works but opens one window; right-click does nothing. Print sends Ctrl+P with Firefox set to print silently to the default printer, then shows `COPY["print_sent"]`. Help shows `{ADMIN_NAME}`, `{ADMIN_PHONE}` and "Connected for support" (Tailscale online). Messages are large and go away on click. Email opens the Google kiosk window at Gmail; Write a Letter opens it at Docs; Facebook opens its own profile; My Downloads opens a Downloads-only viewer; a tile focuses an existing window instead of opening a second one.
 - [ ] **Step 4: Run the tests; expected PASS.** `xvfb-run python3 shell/shell.py --selftest` exits 0.
 - [ ] **Step 5: On the laptop:** autostart the shell; the check confirms it runs after boot with no login screen or stock panel; click through the core tasks (email, Facebook, write and print a letter, Help, Turn off) with the mouse only; confirm a double-click on a tile opens one window; confirm no Firefox prompt or cookie banner appears on first load of Gmail and Facebook (add the uBlock Annoyances lists in Task 5 if one does).
 - [ ] **Step 6: Commit** `feat: custom shell`.
@@ -211,6 +212,19 @@ senior-laptop/
 - [ ] **Step 6: Usability test with her (spec 7.3):** with one sentence of introduction she reads an email, opens Facebook, writes and prints a letter, finds Help and turns it off, without help. Fix anything she stumbles on and re-test; check again after one week.
 - [ ] **Step 7: Place the printed "No one from Microsoft, Apple or your bank will ever call..." card by the screen.**
 - [ ] **Step 8: Commit** `docs: runbook and acceptance results`.
+
+### Task 10b: Pre-delivery preparation and delivery day
+
+**Files:** Modify `senior-laptop/docs/runbook.md` (add a delivery checklist)
+
+- [ ] **Step 1: Collect from her before delivery:** home Wi-Fi name and password, Gmail and Facebook logins and a way to receive 2-step codes (or set recovery to the administrator), the printer (or its make and model), and a list of files on her old Windows computer.
+- [ ] **Step 2: Sign in on the bench:** sign in to Gmail, Docs and Facebook in the kiosk profiles; turn on 2-step verification; reboot and confirm the sessions persist and every screen she will see is covered by the allow-list.
+- [ ] **Step 3: Move her files:** upload her documents and photos from the old Windows computer to Google Drive, and leave the old computer untouched until she is comfortable.
+- [ ] **Step 4: Printer:** install and test her printer (or its replacement) with real prints from Docs and Gmail.
+- [ ] **Step 5: Burn-in:** run 48 hours with the health-check on; confirm no alerts, Conservation Mode on, and one update cycle completes with a snapshot.
+- [ ] **Step 6: Delivery day:** place and plug in; press power; confirm Home appears and the laptop joins her Wi-Fi (if not, use the administrator recovery login to fix it); confirm remote access, print a test page, give the one-sentence introduction and leave the printed card.
+- [ ] **Step 7: One week later:** remote check-in and a phone call; fix anything she stumbled on.
+- [ ] **Step 8: Commit** `docs: delivery checklist`.
 
 ---
 
