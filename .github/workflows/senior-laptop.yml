@@ -1,0 +1,19 @@
+name: senior-laptop
+on:
+  push:
+    paths: ['senior-laptop/**', '.github/workflows/senior-laptop.yml']
+  pull_request:
+    paths: ['senior-laptop/**']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shopt -s globstar nullglob; shellcheck -x senior-laptop/**/*.sh
+      - name: self-test
+        run: bash senior-laptop/tests/run_selftest.sh
+      - name: pytest
+        run: |
+          pip install pytest
+          cd senior-laptop && pytest -q
