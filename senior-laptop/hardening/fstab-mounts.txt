@@ -1,0 +1,5 @@
+# Target state for these mount points; scripts/04-hardening.sh replaces or appends matching /etc/fstab lines.
+# @ROOTUUID@ is replaced with the root filesystem UUID.
+tmpfs /tmp tmpfs size=1G,mode=1777,noexec,nosuid,nodev 0 0
+tmpfs /var/lib/senior-laptop/quarantine tmpfs size=512M,mode=0750,noexec,nosuid,nodev 0 0
+UUID=@ROOTUUID@ /home btrfs subvol=@home,compress=zstd,noexec,nosuid,nodev 0 0

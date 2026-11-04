@@ -38,3 +38,11 @@ set_kv() {
     printf '%s=%s\n' "$key" "$value" >>"$file"
   fi
 }
+
+# grub_add_param FILE PARAM: add PARAM to GRUB_CMDLINE_LINUX_DEFAULT once.
+grub_add_param() {
+  local file="$1" param="$2"
+  if [ "$DRY_RUN" = 1 ]; then echo "+ grub param $param in $file"; return 0; fi
+  grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=.*[\" ]${param}[\" ]" "$file" && return 0
+  sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"\$/ ${param}\"/" "$file"
+}

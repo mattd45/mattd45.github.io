@@ -35,7 +35,7 @@ run systemctl enable greetd
 if [ -f /etc/default/grub ] || [ "$DRY_RUN" = 1 ]; then
   set_kv /etc/default/grub GRUB_TIMEOUT 0
   set_kv /etc/default/grub GRUB_TIMEOUT_STYLE hidden
-  set_kv /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT '"quiet"'
+  grub_add_param /etc/default/grub quiet
   run update-grub
 fi
 

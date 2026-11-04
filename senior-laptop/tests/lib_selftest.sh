@@ -23,6 +23,11 @@ set_kv "$d/k" A 9; set_kv "$d/k" C 3; set_kv "$d/k" C 3
 [ "$(grep -c '^C=3$' "$d/k")" = 1 ] || bad "set_kv should append C exactly once"
 grep -q '^B=2$' "$d/k" || bad "set_kv lost B"
 
+# grub_add_param: adds a word to GRUB_CMDLINE_LINUX_DEFAULT once
+printf 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"\n' >"$d/grub"
+grub_add_param "$d/grub" slab_nomerge; grub_add_param "$d/grub" slab_nomerge; grub_add_param "$d/grub" init_on_alloc=1
+[ "$(cat "$d/grub")" = 'GRUB_CMDLINE_LINUX_DEFAULT="quiet slab_nomerge init_on_alloc=1"' ] || bad "grub_add_param gave: $(cat "$d/grub")"
+
 # dry run: run prints, write_file writes nothing
 out="$(DRY_RUN=1 run touch "$d/never2")"; [ "$out" = "+ touch $d/never2" ] || bad "dry-run run should print the command, got '$out'"
 [ ! -e "$d/never2" ] || bad "dry-run run executed the command"
