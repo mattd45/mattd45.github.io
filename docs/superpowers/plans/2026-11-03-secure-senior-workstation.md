@@ -25,7 +25,7 @@
 - Downloads: quarantine -> ClamAV scan + MIME check -> `~grandma/Downloads`. Allowed: PDF, DOC/DOCX, JPG/PNG, TXT; everything else deleted (infected/disallowed) or held (scanner unavailable).
 - Updates: unattended security upgrades with a snapper snapshot before each; nightly reboot at 04:00; health-check heartbeat every 5 minutes.
 - UI: Home tiles = Email, Facebook, Write a Letter (Google Docs), My Downloads, Help. Bottom bar = Back, Home, Print, Volume, Help. Block page text: "That page isn't available. Tap Help and {ADMIN_NAME} will sort it out." Placeholders `{ADMIN_NAME}`, `{ADMIN_PHONE}` from `config.env`.
-- Usability (spec 7.1): zero-training; shell text >= 28px, tile labels 40px, buttons >= 72px, contrast >= 7:1; every message <= 15 words with no jargon; single-click only with double-click debounce (600ms); any core task <= 2 clicks from Home; idle return to Home after 600s; no unsolicited prompts; all copy lives in `shell/copy.py`.
+- Usability (spec 7.1): shell text >= 28px, tile labels 40px, buttons >= 72px; single-click only (double-clicks ignored for 600ms); one confirmation for turning off; no unsolicited prompts; all user-facing text in `shell/copy.py` in plain words.
 - Audit targets: Lynis hardening index >= 80; `nmap` of LAN and tailnet addresses shows no open ports.
 - Every script is idempotent and passes `shellcheck`.
 
@@ -47,16 +47,15 @@ senior-laptop/
   config.env.example          # ADMIN_NAME, ADMIN_PHONE, HEALTHCHECK_URL, TAILSCALE_AUTHKEY, PRINTER_NAME
   provision.sh                # runs scripts/NN-*.sh in order
   scripts/01-base.sh 02-network.sh 03-remote.sh 04-hardening.sh 05-browser.sh
-          06-airlock.sh 07-desktop.sh 07b-boot.sh 08-printing-usb.sh 09-updates-monitoring.sh
+          06-airlock.sh 07-desktop.sh 08-printing-usb.sh 09-updates-monitoring.sh
   browser/policies.json.tmpl  allowlist.txt  blocked.html.tmpl  firefox.apparmor
   airlock/airlock.py          airlock.service
-  shell/shell.py home.py bar.py help.py messages.py copy.py print_flow.py turn_off.py
+  shell/shell.py home.py bar.py help.py messages.py copy.py
   shell/tiles.json theme.css sway.conf shell.desktop
-  boot/plymouth-theme/
-  ux-prototype/  docs/ux-spec.md
+  docs/ux-spec.md
   hardening/sysctl.conf  modprobe-blacklist.conf  fstab-mounts.txt  usbguard-rules.tmpl
   verify/run.sh  verify/checks/NN-*.sh
-  tests/test_airlock.py  tests/test_shell.py test_copy.py test_theme.py test_flows.py  tests/test_policies.py
+  tests/test_airlock.py  tests/test_shell.py  tests/test_policies.py
   docs/runbook.md             # purchase checks, install, rollback, recovery, rebuild
 ```
 
@@ -75,18 +74,16 @@ senior-laptop/
 - [ ] **Step 5: TPM unlock spike:** `systemd-cryptenroll --tpm2-device=auto`; reboot; expected: boots without a passphrase prompt. If it fails reliably, remove encryption and record the decision.
 - [ ] **Step 6: Commit** `chore: scaffold senior-laptop kit and install notes`.
 
-### Task 1b: Usability research, UX spec and clickable prototype
+### Task 1b: Quick design check with her
 
-**Files:** Create `senior-laptop/docs/ux-spec.md`, `senior-laptop/ux-prototype/index.html` (+ `ux-prototype/*.html`, `tokens.css`)
+**Files:** Create `senior-laptop/docs/ux-spec.md`
 
-**Interfaces:** Produces the design tokens (`--font-body: 28px`, `--font-tile: 40px`, `--target-min: 72px`, `--contrast-min: 7`), the copy deck (every user-facing message), the screen inventory and navigation rules that Task 7 implements. Nothing in Tasks 5-8 may invent copy or sizes outside this spec.
+**Interfaces:** Produces the values Task 7 uses: tile labels and icons, bar buttons, size values (body 28px, tiles 40px, buttons 72px) and the short list of plain-language messages (offline, printer needs paper or ink, new device blocked, download checked and safe, sent to the printer, turn off confirmation, help).
 
-- [ ] **Step 1: Observe her real use** (record in `ux-spec.md`): which tasks she does today, where she hesitates, how she clicks (single vs double-click), pointer speed that suits her, font-size sample at 24/28/36pt on the real screen, volume level, hearing and vision notes, her preferred name and the words she uses for things.
-- [ ] **Step 2: Write `ux-spec.md`:** the seven core tasks with target click paths (<= 2 clicks from Home), the screen inventory (Home, Help, confirm-turn-off, toast, block page), design tokens, and the copy deck.
-- [ ] **Step 3: Build the clickable prototype** (static HTML, mouse-only, real screen size, tokens from `tokens.css`) covering Home, a stubbed Gmail/Facebook/Docs screen with the bottom bar, Print confirmation, Help and Turn off.
-- [ ] **Step 4: Usability round with her** (think-aloud, no hints) on the five core tasks (open email, open Facebook, write a letter, print, get help). Record success unaided, hesitations and wording problems.
-- [ ] **Step 5: Gate G1:** at least 4 of 5 tasks unaided. If not, change the spec and prototype and re-test (up to three rounds); do not start Task 7 until G1 passes.
-- [ ] **Step 6: Commit** `docs: UX spec and clickable prototype`.
+- [ ] **Step 1: Observe her:** note what she does on her computer today, whether she double-clicks, which text size is comfortable (print a sample at 24/28/36pt), pointer speed, her name and the words she uses for things.
+- [ ] **Step 2: Write `ux-spec.md`** with the five tiles, the bottom bar, the size values and the message wording, following spec section 7.1.
+- [ ] **Step 3: Show her a picture of Home** and ask where she'd click to read email, open Facebook, write a letter, print it and get help. Adjust labels or icons until she picks right each time.
+- [ ] **Step 4: Commit** `docs: UX spec`.
 
 ### Task 2: Base OS, accounts, snapshots
 
@@ -96,7 +93,7 @@ senior-laptop/
 
 - [ ] **Step 1: Write the check:** `id grandma` exists and is not in `sudo`/`adm`; SSH server and Bluetooth inactive and disabled; `passwd -S root` shows `L`; `snapper list` works and an `apt install` of a no-op package creates a pre/post pair; `nightly-reboot.timer` and unattended-upgrades enabled.
 - [ ] **Step 2: Run `verify/run.sh --only 01`; expected FAIL.**
-- [ ] **Step 3: Implement `01-base.sh`** (idempotent user creation; display-manager autologin; apt hook calling `snapper create --type pre/post`).
+- [ ] **Step 3: Implement `01-base.sh`** (idempotent user creation; autologin straight to the shell (no login screen); quiet boot with the boot menu hidden; apt hook calling `snapper create --type pre/post`).
 - [ ] **Step 4: Re-run; expected PASS.** Reboot; confirm auto-login. Test rollback: install a package, `snapper rollback`, reboot, package gone. Record boot-fallback steps in the runbook.
 - [ ] **Step 5: Commit** `feat: base OS, accounts, snapshots`.
 
@@ -159,41 +156,23 @@ senior-laptop/
 
 ### Task 7: Custom shell (Home, bottom bar, messages)
 
-**Files:** Create `shell/shell.py`, `shell/home.py`, `shell/bar.py`, `shell/help.py`, `shell/messages.py`, `shell/copy.py`, `shell/tiles.json`, `shell/theme.css`, `shell/sway.conf`, `shell/shell.desktop`, `tests/test_shell.py`, `tests/test_copy.py`, `tests/test_theme.py`, `verify/checks/07-shell.sh`
+**Files:** Create `shell/shell.py`, `shell/home.py`, `shell/bar.py`, `shell/help.py`, `shell/messages.py`, `shell/copy.py`, `shell/tiles.json`, `shell/theme.css`, `shell/sway.conf`, `shell/shell.desktop`, `tests/test_shell.py`, `verify/checks/07-shell.sh`
 
 **Interfaces:**
 - `def load_tiles(path: Path) -> list[Tile]`, `Tile = {label: str, command: list[str], icon: str}`; order: Email, Facebook, Write a Letter, My Downloads, Help.
-- `copy.COPY: dict[str, str]`: the only place user-facing text lives; every value is <= 15 words and avoids the jargon list in `tests/test_copy.py` (e.g. error, failed, driver, firewall, server, network, USB, malware, quarantine).
+- `copy.COPY: dict[str, str]`: all user-facing text, in plain words, from `docs/ux-spec.md`.
 - `def connectivity_message() -> str | None`: `None` online, else `COPY["offline"]`.
 - `def printer_message() -> str | None`: maps CUPS reasons (`media-empty`, `marker-supply-low`, `offline`) to `COPY["printer_paper_ink"]` etc.
 - `def usb_blocked_message() -> str | None`: `COPY["new_device_blocked"]` when USBGuard has blocked an input device.
 - `class ClickDebouncer(window_ms: int = 600)` with `accept(now_ms: int) -> bool`: false for a second click inside the window.
-- `class IdleMonitor(seconds: int = 600)` calling `on_idle()` once per idle period.
-- Compositor: `sway` (IPC via `swaymsg`) unless the spike in step 1 finds a blocker; all windows maximized, no decorations, no window-switch keys; a tile focuses the existing window instead of opening a duplicate.
-- Theme values come from `docs/ux-spec.md`; `theme.css` defines the tokens from Task 1b.
+- Compositor: `sway`; all windows maximized, no decorations, window-closing and fullscreen shortcuts (Ctrl+W, Ctrl+Q, Alt+F4, F11) removed.
 
-- [ ] **Step 1: Spike (compositor and layer-shell):** on the laptop confirm `sway` runs fullscreen with our GTK shell docked as a layer-shell bar (`gtk-layer-shell`), Firefox `--kiosk --no-remote -P google` fills the remaining space, and keyboard shortcuts for closing or switching windows (Ctrl+W, Ctrl+Q, Alt+F4, F11) can be remapped out. Record the result; if sway fails, choose `labwc` and update the interface note.
-- [ ] **Step 2: Write failing tests:** `tests/test_shell.py` (`load_tiles` returns exactly the five labels in order with non-empty commands; `ClickDebouncer` accepts the first click and rejects a second at +300ms, accepts at +700ms; `IdleMonitor` fires `on_idle` once after 600s of simulated inactivity and again only after new activity; `connectivity_message`, `printer_message` and `usb_blocked_message` return the `COPY` strings for stubbed states); `tests/test_copy.py` (every `COPY` value <= 15 words and contains none of the jargon words); `tests/test_theme.py` (parses `theme.css`: body font >= 28px, tile font >= 40px, button height >= 72px, and every foreground/background token pair has contrast >= 7:1).
-- [ ] **Step 3: Run `pytest tests/test_shell.py tests/test_copy.py tests/test_theme.py`; expected FAIL.**
-- [ ] **Step 4: Implement** to the interfaces. `home.py`: greeting with her name (from `config.env`), large clock and date, five tiles. `bar.py`: bottom bar Back, Home, Print, Volume (- and +), Help, always visible. `help.py`: `{ADMIN_NAME}`, `{ADMIN_PHONE}` and a "Connected for support" indicator (Tailscale online). Toasts: large, bottom area, dismiss after 10s or on click. Home resets to a clean state (closes extra windows; Docs and Gmail autosave). Email opens the Google kiosk window at Gmail; Write a Letter opens it at Docs; Facebook opens its own profile; My Downloads opens a Downloads-only viewer.
-- [ ] **Step 5: Run the tests; expected PASS.** `xvfb-run python3 shell/shell.py --selftest` exits 0.
-- [ ] **Step 6: On the laptop:** autostart the shell; the check confirms the compositor and shell run after boot with no login screen or stock panel; click through all seven core tasks using only the mouse; confirm a double-click on a tile opens one window; confirm no Firefox prompt, restore-session dialog or cookie banner appears on first load of Gmail and Facebook (add the uBlock Annoyances lists in Task 5 if one does).
-- [ ] **Step 7: Commit** `feat: custom shell`.
-
-### Task 7b: Boot experience, print flow, turn-off flow
-
-**Files:** Create `shell/print_flow.py`, `shell/turn_off.py`, `boot/plymouth-theme/`, `scripts/07b-boot.sh`, `tests/test_flows.py`, `verify/checks/07b-boot-flows.sh`
-
-**Interfaces:**
-- `def print_current_page(send_key: Callable[[str], None], notify: Callable[[str], None]) -> None`: sends the browser's print shortcut, relies on Firefox `print.always_print_silent` = true so the page prints directly to the default printer, then `notify(COPY["print_sent"])`.
-- `def turn_off(confirm: Callable[[str], bool], poweroff: Callable[[], None]) -> bool`: asks `COPY["turn_off_confirm"]` with "Keep working" as the default; calls `poweroff()` only on explicit confirmation.
-
-- [ ] **Step 1: Write failing tests:** `print_current_page` calls `send_key("ctrl+p")` then `notify(COPY["print_sent"])`; `turn_off` does not call `poweroff` when `confirm` returns `False`, and does when it returns `True`.
-- [ ] **Step 2: Run `pytest tests/test_flows.py`; expected FAIL.**
-- [ ] **Step 3: Implement the two modules and the Plymouth theme;** `07b-boot.sh` sets quiet boot, hides the boot menu, enables the splash, disables the login screen (autologin straight to the shell). Set `print.always_print_silent` in `policies.json` via Task 5's template.
-- [ ] **Step 4: Run the tests; expected PASS.**
-- [ ] **Step 5: On the laptop:** cold boot shows only the splash, then Home with no text prompts; Print from Docs sends a page to the printer and shows the confirmation; Turn off asks once and shuts down; Keep working returns to where she was. Record boot-to-Home time.
-- [ ] **Step 6: Commit** `feat: boot experience, print and turn-off flows`.
+- [ ] **Step 1: Write failing tests in `tests/test_shell.py`:** `load_tiles` returns exactly the five labels in order with non-empty commands; `ClickDebouncer` accepts the first click, rejects a second at +300ms and accepts one at +700ms; `connectivity_message`, `printer_message` and `usb_blocked_message` return the `COPY` strings for stubbed states.
+- [ ] **Step 2: Run `pytest tests/test_shell.py`; expected FAIL.**
+- [ ] **Step 3: Implement** to the interfaces. Home: greeting with her name (from `config.env`), large date and time, five tiles, and a "Turn off" button that asks once ("Turn off" / "Keep working"). Bottom bar: Back, Home, Print, Volume (- and +), Help, always visible. Print sends Ctrl+P with Firefox set to print silently to the default printer, then shows `COPY["print_sent"]`. Help shows `{ADMIN_NAME}`, `{ADMIN_PHONE}` and "Connected for support" (Tailscale online). Messages are large and go away on click. Email opens the Google kiosk window at Gmail; Write a Letter opens it at Docs; Facebook opens its own profile; My Downloads opens a Downloads-only viewer; a tile focuses an existing window instead of opening a second one.
+- [ ] **Step 4: Run the tests; expected PASS.** `xvfb-run python3 shell/shell.py --selftest` exits 0.
+- [ ] **Step 5: On the laptop:** autostart the shell; the check confirms it runs after boot with no login screen or stock panel; click through the core tasks (email, Facebook, write and print a letter, Help, Turn off) with the mouse only; confirm a double-click on a tile opens one window; confirm no Firefox prompt or cookie banner appears on first load of Gmail and Facebook (add the uBlock Annoyances lists in Task 5 if one does).
+- [ ] **Step 6: Commit** `feat: custom shell`.
 
 ### Task 8: Desktop lockdown, clean-slate boot, printing and USBGuard
 
@@ -229,7 +208,7 @@ senior-laptop/
 - [ ] **Step 3: Audit:** run `lynis audit system` (index >= 80) and an OpenSCAP scan with the closest available profile; from another machine, boot a Kali live USB and run `nmap -p- <LAN address>` and `nmap -p- <tailnet address>`; expected no open ports. Record the findings and fix or justify each high item.
 - [ ] **Step 4: Run `provision.sh` on a fresh install, then `verify/run.sh`; expected all PASS.** Reboot and confirm Home loads, remote access reconnects and timers are active.
 - [ ] **Step 5: Rebuild test:** reinstall from the runbook and scripts, time it (target under one hour); create the golden disk image and store it off the device.
-- [ ] **Step 6: Usability acceptance session with her (spec 7.1):** give one sentence of introduction only, then time all seven core tasks; record U1-U6 results in a pass/fail table in `docs/runbook.md`. Fix any failed target (wording, sizes, flow) and re-run; schedule the week-1 re-check and the week-4 support-call tally (U7).
+- [ ] **Step 6: Usability test with her (spec 7.3):** with one sentence of introduction she reads an email, opens Facebook, writes and prints a letter, finds Help and turns it off, without help. Fix anything she stumbles on and re-test; check again after one week.
 - [ ] **Step 7: Place the printed "No one from Microsoft, Apple or your bank will ever call..." card by the screen.**
 - [ ] **Step 8: Commit** `docs: runbook and acceptance results`.
 
@@ -242,6 +221,6 @@ senior-laptop/
 **Task 12: DNS allow-list.** Local resolver answering only for `allowlist.txt` domains (NXDOMAIN otherwise). Check: allow-listed name resolves, `example.com` returns NXDOMAIN, and the Gmail/Docs/Facebook sign-in flows still work; record any extra CDN domains needed.
 
 ## Self-review notes
-- Spec coverage: 6.1->Tasks 1-2, 6.2->Task 5, 6.3->Tasks 4/8, 6.4/6.5->Task 3, 6.6->Task 6, 6.7->Task 8, 6.8->Tasks 2/9/10, 6.9->Task 10, UX->Tasks 1b, 7, 7b and 10, optional extras->Tasks 11-12.
+- Spec coverage: 6.1->Tasks 1-2, 6.2->Task 5, 6.3->Tasks 4/8, 6.4/6.5->Task 3, 6.6->Task 6, 6.7->Task 8, 6.8->Tasks 2/9/10, 6.9->Task 10, UX->Tasks 1b, 7 and 10, optional extras->Tasks 11-12.
 - Open items stay explicit: printer model (Task 8), RAM slot and Wi-Fi chip (Task 1), TPM unlock (Task 1), Flatpak vs AppArmor (Task 5), RustDesk viability (Task 3), allow-list contents (Task 5), ADMIN_NAME/ADMIN_PHONE (config).
 - Pure logic (`classify`, `process`, `load_tiles`, policy rendering) is unit-tested off-device; hardware-dependent steps run on the laptop.
