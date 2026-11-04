@@ -1,0 +1,45 @@
+# AppArmor profile for Firefox ESR, in COMPLAIN mode until a week of real use has been
+# reviewed (aa-logprof), then switch to enforce (runbook). Allows only its profile,
+# the quarantine and Downloads folders, and system resources; denies secrets.
+abi <abi/3.0>,
+include <tunables/global>
+
+/usr/lib/firefox-esr/firefox-esr flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/fonts>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+  include <abstractions/mesa>
+  include <abstractions/gnome>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+  network unix,
+
+  /usr/lib/firefox-esr/** mr,
+  /usr/lib/firefox-esr/firefox-esr ix,
+  /usr/lib/firefox-esr/{glxtest,vaapitest} ix,
+  /usr/share/** r,
+  /etc/firefox/** r,
+  /etc/firefox-esr/** r,
+
+  /home/*/.mozilla/** rwk,
+  /home/*/.cache/mozilla/** rwk,
+  /home/*/Downloads/** r,
+  /var/lib/senior-laptop/quarantine/** rw,
+  /tmp/** rwk,
+  /dev/shm/** rwk,
+  /run/user/*/** rw,
+  /proc/** r,
+  /sys/** r,
+  /dev/dri/** rw,
+
+  deny /home/*/.ssh/** rwklx,
+  deny /home/*/.gnupg/** rwklx,
+  deny /home/*/.config/** w,
+  deny /root/** rwklx,
+  deny /etc/shadow rwklx,
+}

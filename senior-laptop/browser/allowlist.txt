@@ -1,0 +1,16 @@
+# Domains she may visit (one per line; "*." matches subdomains). Extend on the laptop
+# (Task 5 step 6) for every domain that wrongly shows the blocked page.
+# Google: Gmail, Docs, Drive, sign-in
+mail.google.com
+accounts.google.com
+docs.google.com
+drive.google.com
+apis.google.com
+*.gstatic.com
+*.googleusercontent.com
+*.googleapis.com
+# Facebook
+facebook.com
+*.facebook.com
+*.fbcdn.net
+*.facebook.net
