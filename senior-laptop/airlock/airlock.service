@@ -1,0 +1,19 @@
+[Unit]
+Description=Download airlock (scan every download before delivery)
+After=clamav-daemon.service
+Wants=clamav-daemon.service
+
+[Service]
+User=airlock
+Group=airlock
+ExecStart=/usr/bin/python3 /opt/senior-laptop/airlock/airlock.py /var/lib/senior-laptop/quarantine /home/grandma/Downloads
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/senior-laptop/quarantine /home/grandma/Downloads /run/senior-laptop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
