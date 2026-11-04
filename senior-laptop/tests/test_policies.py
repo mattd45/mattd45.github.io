@@ -44,7 +44,13 @@ def test_everything_is_blocked_except_the_allowlist():
     assert p["Block"] == ["<all_urls>"]
     assert "*://mail.google.com/*" in p["Exceptions"]
     assert "*://*.fbcdn.net/*" in p["Exceptions"]
-    assert len(p["Exceptions"]) == len(seed_allowlist())
+    web = [e for e in p["Exceptions"] if e.startswith("*://")]
+    assert len(web) == len(seed_allowlist())
+
+
+def test_only_the_downloads_folder_can_be_viewed_as_files():
+    files = [e for e in policies()["WebsiteFilter"]["Exceptions"] if e.startswith("file:")]
+    assert files == ["file:///home/grandma/Downloads/*"]
 
 
 def test_ublock_is_forced_and_other_extensions_are_blocked():

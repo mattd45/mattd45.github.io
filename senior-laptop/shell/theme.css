@@ -1,0 +1,18 @@
+/* Sizes and colours from docs/ux-spec.md: dark text on white, large everything. */
+* { font-family: "DejaVu Sans", sans-serif; }
+window, .page { background-color: #ffffff; color: #111111; font-size: 28px; }
+.greeting { font-size: 48px; font-weight: bold; }
+.datetime { font-size: 32px; }
+.tile { font-size: 40px; min-height: 180px; min-width: 300px; background: #e8f0fb;
+        border: 4px solid #0b5cad; border-radius: 16px; color: #111111; }
+.tile:hover { background: #cfe0f7; }
+.tile-icon { font-size: 64px; }
+.bar { background-color: #0b5cad; }
+.bar button { font-size: 28px; min-height: 72px; min-width: 110px; background: #ffffff;
+              color: #111111; border-radius: 12px; margin: 6px; }
+.bar button:hover { background: #cfe0f7; }
+.bar .clock { font-size: 32px; color: #ffffff; margin: 12px; }
+.toast { background-color: #fff4c2; color: #111111; font-size: 32px; border: 4px solid #111111;
+         border-radius: 16px; padding: 24px; }
+.toast button { font-size: 28px; min-height: 72px; }
+.danger { font-size: 32px; min-height: 96px; }

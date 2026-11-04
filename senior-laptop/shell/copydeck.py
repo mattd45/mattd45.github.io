@@ -14,6 +14,7 @@ COPY = {
     "download_safe": "Checked and safe.",
     "download_held": "I couldn't check that file yet. Ask {ADMIN_NAME}.",
     "download_blocked": "That file isn't allowed, so it was removed.",
+    "downloads_empty": "No files yet.",
     "print_sent": "Sent to the printer.",
     "turn_off_confirm": "Turn off the computer?",
     "turn_off_yes": "Turn off",

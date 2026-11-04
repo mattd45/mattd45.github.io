@@ -1,0 +1,12 @@
+[
+  {"label": "Email", "icon": "✉️",
+   "command": ["firefox-esr", "--no-remote", "--kiosk", "-P", "google", "https://mail.google.com/"]},
+  {"label": "Facebook", "icon": "👨‍👩‍👧",
+   "command": ["firefox-esr", "--no-remote", "--kiosk", "-P", "facebook", "https://www.facebook.com/"]},
+  {"label": "Write a Letter", "icon": "✍️",
+   "command": ["firefox-esr", "--no-remote", "--kiosk", "-P", "google", "https://docs.google.com/document/"]},
+  {"label": "My Downloads", "icon": "📁",
+   "command": ["internal:downloads"]},
+  {"label": "Help", "icon": "📞",
+   "command": ["internal:help"]}
+]

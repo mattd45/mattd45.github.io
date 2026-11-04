@@ -9,6 +9,7 @@ from pathlib import Path
 
 UBO = "uBlock0@raymondhill.net"
 QUARANTINE = "/var/lib/senior-laptop/quarantine"
+DOWNLOADS_VIEW = "file:///home/grandma/Downloads/*"   # lets the Downloads viewer open PDFs and images
 UBO_LISTS = ["user-filters", "ublock-filters", "ublock-badware", "ublock-unbreak",
              "easylist", "ublock-cookies-adguard", "ublock-annoyances"]
 
@@ -27,7 +28,7 @@ def render_policies(allowlist: list[str]) -> dict:
     return {"policies": {
         "WebsiteFilter": {
             "Block": ["<all_urls>"],
-            "Exceptions": [f"*://{domain}/*" for domain in allowlist],
+            "Exceptions": [f"*://{domain}/*" for domain in allowlist] + [DOWNLOADS_VIEW],
         },
         "ExtensionSettings": {
             UBO: {
