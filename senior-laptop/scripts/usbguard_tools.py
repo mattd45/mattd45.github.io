@@ -14,6 +14,7 @@ from pathlib import Path
 
 KEEP = {"03", "07", "09"}   # HID (mouse, keyboard), printer, hub
 _IFACE = re.compile(r"\b([0-9a-fA-F]{2}):[0-9a-fA-F]{2}:[0-9a-fA-F*]{2}\b")
+_PIN = re.compile(r'\s+(?:via-port|parent-hash)\s+"[^"]*"')   # port-pinning: moving a device is not a new device
 _WITH = re.compile(r"with-interface\s+(?:(?:all-of|one-of|equals|equals-ordered|none-of)\s+)?(\{[^}]*\}|\S+)")
 
 
@@ -29,8 +30,8 @@ def filter_rules(text: str, keep: set[str] = KEEP) -> str:
         if not line.startswith("allow "):
             continue
         classes = _classes(line)
-        if classes and all(c in keep for c in classes):
-            kept.append(line)
+        if classes and ("07" in classes or all(c in keep for c in classes)):   # multifunction printers too
+            kept.append(_PIN.sub("", line))
     return "".join(f"{line}\n" for line in kept)
 
 
@@ -54,8 +55,12 @@ class UsbWatchParser:
         elif line.startswith("target="):
             self._blocked = line == "target=block"
         elif line.startswith("device_rule="):
-            return self._insert and self._blocked and "03" in _classes(line)
+            return self._insert and self._blocked        # any blocked device, so a replaced printer shows a message too
         return False
+
+    @staticmethod
+    def is_allow(line: str) -> bool:
+        return line.strip().startswith("[device] Allow")
 
 
 def main(argv: list[str]) -> int:
@@ -71,6 +76,8 @@ def main(argv: list[str]) -> int:
             if parser.feed(line):
                 flag.parent.mkdir(parents=True, exist_ok=True)
                 flag.write_text("1")
+            elif parser.is_allow(line):                  # the admin allowed it: clear the message
+                flag.unlink(missing_ok=True)
     else:
         print(__doc__, file=sys.stderr)
         return 2

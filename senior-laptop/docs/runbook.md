@@ -66,3 +66,13 @@ After a clean install: `provision.sh`, `verify/run.sh`, then take an image of th
 
 **One week later**
 7. Remote check-in and a phone call; fix anything she stumbled on.
+
+## After the code review (read before first boot on the laptop)
+- **Check Home from inside an app.** The bottom bar is drawn on the overlay layer so it stays visible over fullscreen Firefox (it covers roughly the bottom 84px of the page). On the laptop open Gmail, Facebook and Docs and click Home, Back, Print and Help from inside each. If the bar is not visible over a kiosk window, stop Firefox going fullscreen with a sway rule instead.
+- **Tailscale key expiry:** in the Tailscale admin console choose "Disable key expiry" for this device (node keys otherwise expire after about 180 days and you silently lose remote access while the heartbeat still passes).
+- **Snapshot rollback on Debian:** Debian's btrfs install mounts root with an explicit `subvol=@rootfs`, which can make `snapper rollback` change nothing. Test it as part of Task 2. If it does nothing, roll back by hand: from GRUB press `e`, change `rootflags=subvol=@rootfs` to `rootflags=subvol=<snapshot path>`, boot, confirm, then make that permanent.
+- **`/home` layout:** the hardening step only adds `noexec,nosuid,nodev` to the existing `/home` entry and refuses to run if there is none; it never replaces your layout.
+- **Running some steps:** `provision.sh --only 04,05` and `verify/run.sh --only 08,09` take comma-separated numbers; a number that matches nothing is an error.
+- **Replacing her mouse, keyboard or printer:** plug it in and re-run `provision.sh --only 08` (port moves no longer count as new devices; a multifunction printer is accepted). A blocked device now shows the "new device was blocked" message for any kind of device, and the message clears when you allow the device.
+- **PDF downloads:** Firefox is told to save PDFs instead of opening them from the quarantine folder; confirm on the laptop that a Gmail PDF attachment ends up in My Downloads and opens from there.
+- **Virus signatures:** the airlock holds every file (and tells you) if signatures are older than three days; confirm `freshclam` runs and `AlertExceedsMax yes` is in `/etc/clamav/clamd.conf`.

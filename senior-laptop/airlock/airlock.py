@@ -24,6 +24,9 @@ from copydeck import text  # noqa: E402
 log = logging.getLogger("airlock")
 RETRY_SECONDS = 300
 PARTIAL_SUFFIXES = (".part", ".tmp", ".crdownload")
+MAX_SIGNATURE_AGE_SECONDS = 3 * 86400
+EXTENSIONS = {"pdf": {".pdf"}, "doc": {".doc"}, "docx": {".docx"}, "jpg": {".jpg", ".jpeg"},
+              "png": {".png"}, "txt": {".txt"}}
 ALLOWED_MIME = {
     "application/pdf": "pdf",
     "application/msword": "doc",
@@ -52,7 +55,23 @@ def classify(path: Path) -> str | None:
     return ALLOWED_MIME.get(out.stdout.strip())
 
 
-def scan(path: Path, clamdscan: str | None = None) -> Verdict:
+def signatures_fresh(clamav_dir: Path | None = None, now: Callable[[], float] = time.time) -> bool:
+    """False if the virus signatures are missing or older than three days (fail closed)."""
+    directory = Path(clamav_dir or os.environ.get("AIRLOCK_CLAMAV_DIR", "/var/lib/clamav"))
+    if not directory.is_dir():
+        return True                       # nothing to judge here; clamdscan reports its own errors
+    daily = list(directory.glob("daily.c[vl]d"))
+    return bool(daily) and now() - max(p.stat().st_mtime for p in daily) <= MAX_SIGNATURE_AGE_SECONDS
+
+
+def _final_name(name: str, kind: str) -> str:
+    """Delivered files always carry an extension that matches their detected type."""
+    return name if Path(name).suffix.lower() in EXTENSIONS[kind] else f"{name}.{kind}"
+
+
+def scan(path: Path, clamdscan: str | None = None, clamav_dir: Path | None = None) -> Verdict:
+    if not signatures_fresh(clamav_dir):
+        return Verdict.SCAN_ERROR
     clamdscan = clamdscan or os.environ.get("AIRLOCK_CLAMDSCAN", "clamdscan")
     try:
         rc = subprocess.run([clamdscan, "--fdpass", "--no-summary", str(path)],
@@ -121,7 +140,8 @@ def process(path: Path, downloads_dir: Path, notify: Callable[[str, str], None],
         staged = Path(stage) / name
         shutil.copyfile(path, staged)               # scan and deliver this private copy
 
-        if classify(staged) is None:
+        kind = classify(staged)
+        if kind is None:
             path.unlink(missing_ok=True)
             notify("admin", f"Removed a disallowed file type: {name}")
             notify("user", text("download_blocked"))
@@ -133,7 +153,7 @@ def process(path: Path, downloads_dir: Path, notify: Callable[[str, str], None],
             notify("admin", f"Removed an infected download: {name}")
             notify("user", text("download_blocked"))
         elif verdict is Verdict.CLEAN:
-            dest = _unique(downloads_dir / name)
+            dest = _unique(downloads_dir / _final_name(name, kind))
             tmp = downloads_dir / f".{dest.name}.partial"
             shutil.copyfile(staged, tmp)
             os.chmod(tmp, 0o644)
@@ -165,8 +185,15 @@ def sweep(quarantine: Path, downloads_dir: Path, notify: Callable[[str, str], No
     for path in sorted(Path(quarantine).iterdir()):
         if now() < state.held_until.get(path.name, 0):
             continue
-        verdict = process(path, downloads_dir, quiet if path.name in state.notified else notify,
-                          scan_fn=scan_fn, settle=settle, sleep=sleep)
+        try:
+            verdict = process(path, downloads_dir, quiet if path.name in state.notified else notify,
+                              scan_fn=scan_fn, settle=settle, sleep=sleep)
+        except Exception as exc:  # noqa: BLE001 - one bad file must never stop the airlock
+            log.exception("airlock error on %s", path.name)
+            verdict = Verdict.SCAN_ERROR
+            if path.name not in state.notified:
+                notify("admin", f"Airlock error on {path.name}: {exc}")
+                notify("user", text("download_held"))
         results[path.name] = verdict
         if verdict is Verdict.SCAN_ERROR:
             state.held_until[path.name] = now() + RETRY_SECONDS

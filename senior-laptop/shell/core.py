@@ -79,3 +79,40 @@ def support_connected(run=subprocess.run) -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
     return '"BackendState": "Running"' in out.stdout
+
+
+class DelayedConfirm:
+    """A confirmation that ignores clicks until it has been on screen for a moment, so the
+    second click of a double-click can never confirm it."""
+
+    def __init__(self, delay_ms: int = 1000) -> None:
+        self.delay_ms = delay_ms
+        self._shown: int | None = None
+
+    def shown(self, now_ms: int) -> None:
+        self._shown = now_ms
+
+    def accept(self, now_ms: int) -> bool:
+        return self._shown is not None and now_ms - self._shown >= self.delay_ms
+
+
+def stop_process(proc, timeout: float = 5.0) -> None:
+    """Ask an app to quit, wait for it, and kill it if it hangs (so the next launch of the same
+    Firefox profile never meets a half-closed one)."""
+    if proc is None or proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+
+
+def list_downloads(directory: Path) -> list[Path]:
+    """Her delivered files, newest first, without hidden or partial leftovers."""
+    directory = Path(directory)
+    if not directory.is_dir():
+        return []
+    files = [p for p in directory.iterdir() if p.is_file() and not p.name.startswith(".")]
+    return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)

@@ -10,8 +10,9 @@ run apt-get install -y curl
 run install -m 0755 "$KIT/monitoring/senior-laptop-alert" /usr/local/bin/senior-laptop-alert
 run install -m 0755 "$KIT/monitoring/senior-laptop-heartbeat" /usr/local/bin/senior-laptop-heartbeat
 
-# The health-check URL is a secret: root-only, never in the repo.
-write_file /etc/senior-laptop-monitor.env 0600 <<ENV
+# The health-check URL is a secret: never in the repo. Readable by root and the airlock service
+# (group airlock) so the airlock's own alerts reach the administrator.
+write_file /etc/senior-laptop-monitor.env 0640 <<ENV
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-}"
 ENV
 
@@ -51,6 +52,7 @@ OnFailure=senior-laptop-alert@%n.service
 CONF
 done
 
+run_ok chgrp airlock /etc/senior-laptop-monitor.env
 run systemctl daemon-reload
 run systemctl enable --now senior-laptop-heartbeat.timer
 log "done"

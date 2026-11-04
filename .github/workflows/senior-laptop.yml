@@ -16,6 +16,7 @@ jobs:
           bash senior-laptop/tests/run_selftest.sh
           bash senior-laptop/tests/lib_selftest.sh
           bash senior-laptop/tests/alert_selftest.sh
+          bash senior-laptop/tests/provision_selftest.sh
       - name: pytest
         run: |
           pip install pytest

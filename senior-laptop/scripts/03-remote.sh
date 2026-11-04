@@ -17,7 +17,7 @@ run curl -fsSL "https://pkgs.tailscale.com/stable/debian/${codename}.tailscale-k
 run apt-get update
 run apt-get install -y tailscale
 run systemctl enable --now tailscaled
-run tailscale up --auth-key="${TAILSCALE_AUTHKEY:?set TAILSCALE_AUTHKEY in config.env}" --ssh --hostname=senior-laptop
+run tailscale up --auth-key="${TAILSCALE_AUTHKEY:?set TAILSCALE_AUTHKEY in config.env}" --ssh --accept-dns=false --hostname=senior-laptop
 
 if [ -n "${RUSTDESK_DEB:-}" ]; then
   run apt-get install -y "$RUSTDESK_DEB"

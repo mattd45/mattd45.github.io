@@ -107,3 +107,15 @@ def test_apparmor_profile_denies_secrets_and_starts_in_complain_mode():
     assert "flags=(complain)" in text
     assert "deny /home/*/.ssh/** rwklx," in text
     assert "/var/lib/senior-laptop/quarantine/** rw," in text
+
+
+def test_pdfs_are_saved_not_opened_from_the_quarantine_folder():
+    handlers = policies()["Handlers"]["mimeTypes"]
+    assert handlers["application/pdf"]["action"] == "saveToDisk"
+
+
+def test_allowlist_covers_the_google_sign_in_and_facebook_extras():
+    domains = seed_allowlist()
+    for needed in ("accounts.youtube.com", "www.google.com", "consent.google.com",
+                   "myaccount.google.com", "ogs.google.com", "*.fbsbx.com"):
+        assert needed in domains, needed

@@ -1,7 +1,8 @@
-# Target state for these mount points; scripts/04-hardening.sh replaces or appends matching /etc/fstab lines.
+# Target state for these mount points (scripts/fstab_tools.py): a plain line replaces or appends the
+# /etc/fstab entry; "@KEEP@ /home ..." keeps /home's existing device and options and only adds these.
 # @ROOTUUID@ is replaced with the root filesystem UUID, @GRANDMA_UID@ with her numeric user id.
 # ~grandma/.cache is a tmpfs, so browser cache and other caches reset on every boot (clean slate).
 tmpfs /tmp tmpfs size=1G,mode=1777,noexec,nosuid,nodev 0 0
 tmpfs /var/lib/senior-laptop/quarantine tmpfs size=512M,mode=0750,noexec,nosuid,nodev 0 0
-UUID=@ROOTUUID@ /home btrfs subvol=@home,compress=zstd,noexec,nosuid,nodev 0 0
+@KEEP@ /home btrfs noexec,nosuid,nodev 0 0
 tmpfs /home/grandma/.cache tmpfs size=512M,mode=0700,uid=@GRANDMA_UID@,gid=@GRANDMA_UID@,noexec,nosuid,nodev 0 0

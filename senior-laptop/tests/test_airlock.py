@@ -228,3 +228,51 @@ def test_notify_user_writes_a_message_file_for_the_shell(tmp_path, monkeypatch):
     files = list(spool.iterdir())
     assert len(files) == 1 and files[0].read_text() == "Checked and safe."
     assert stat.S_IMODE(files[0].stat().st_mode) & 0o004      # readable by her session
+
+
+# ---- review fixes ----
+def test_extension_is_forced_to_match_the_detected_type(dirs):
+    a = al(); q, d = dirs
+    a.process(put(q, "photo.html", JPG), d, Notes(), scan_fn=fake_scan(), settle=0)
+    assert (d / "photo.html.jpg").exists() and not (d / "photo.html").exists()
+    a.process(put(q, "holiday.JPEG", JPG), d, Notes(), scan_fn=fake_scan(), settle=0)
+    assert (d / "holiday.JPEG").exists()
+    a.process(put(q, "noext", PDF), d, Notes(), scan_fn=fake_scan(), settle=0)
+    assert (d / "noext.pdf").exists()
+
+
+def test_stale_or_missing_signatures_hold_the_file(tmp_path):
+    import time
+    a = al()
+    f = tmp_path / "f.txt"; f.write_text("x")
+    ok = fake_clamdscan(tmp_path, 0)
+    old = tmp_path / "old"; old.mkdir()
+    db = old / "daily.cld"; db.write_text("db")
+    ten_days_ago = time.time() - 10 * 86400
+    os.utime(db, (ten_days_ago, ten_days_ago))
+    assert a.scan(f, clamdscan=ok, clamav_dir=old) == a.Verdict.SCAN_ERROR
+    empty = tmp_path / "empty"; empty.mkdir()
+    assert a.scan(f, clamdscan=ok, clamav_dir=empty) == a.Verdict.SCAN_ERROR
+    fresh = tmp_path / "fresh"; fresh.mkdir()
+    (fresh / "daily.cvd").write_text("db")
+    assert a.scan(f, clamdscan=ok, clamav_dir=fresh) == a.Verdict.CLEAN
+
+
+def test_sweep_survives_an_unexpected_error_on_one_file(dirs):
+    a = al(); q, d = dirs; n = Notes()
+    put(q, "a.pdf", PDF); put(q, "b.pdf", PDF)
+
+    def scan(p):
+        if p.name == "a.pdf":
+            raise PermissionError("cannot reach Downloads")
+        return a.Verdict.CLEAN
+
+    results = a.sweep(q, d, n, scan_fn=scan, settle=0, state=a.SweepState())
+    assert results["a.pdf"] == a.Verdict.SCAN_ERROR and results["b.pdf"] == a.Verdict.CLEAN
+    assert (d / "b.pdf").exists() and (q / "a.pdf").exists()
+    assert "admin" in n.audiences()
+
+
+def test_airlock_service_has_start_limits_so_a_crash_loop_ends_in_failed():
+    text = (ROOT / "airlock" / "airlock.service").read_text()
+    assert "StartLimitBurst=" in text and "StartLimitIntervalSec=" in text

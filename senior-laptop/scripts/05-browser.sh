@@ -20,7 +20,7 @@ rm -f "$tmp"
 
 # Two profiles for her: one for Google (Gmail + Docs), one for Facebook.
 for name in google facebook; do
-  [ -d "/home/grandma/.mozilla/$name" ] || run runuser -u grandma -- firefox-esr -CreateProfile "$name /home/grandma/.mozilla/$name"
+  [ -d "/home/grandma/.mozilla/$name" ] || run runuser -u grandma -- env HOME=/home/grandma firefox-esr --headless -CreateProfile "$name /home/grandma/.mozilla/$name"
 done
 
 # AppArmor (complain mode first; see the profile header).

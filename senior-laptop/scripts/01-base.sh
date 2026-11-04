@@ -11,7 +11,8 @@ run apt-get install -y sudo snapper btrfs-progs unattended-upgrades greetd
 id grandma >/dev/null 2>&1 || run useradd -m -s /bin/bash -c "${HER_NAME:-Grandma}" grandma
 id admin >/dev/null 2>&1 || run useradd -m -s /bin/bash -G sudo admin
 run_ok gpasswd -d grandma sudo
-run chmod 0700 /home/admin /home/grandma
+run chmod 0700 /home/admin
+run chmod 0711 /home/grandma     # others may pass through (not list) so the airlock service can reach ~/Downloads
 run passwd -l root
 
 # Services she must not have.
@@ -40,11 +41,13 @@ if [ -f /etc/default/grub ] || [ "$DRY_RUN" = 1 ]; then
   run update-grub
 fi
 
-# Snapshots: one before and one after every apt run.
+# Snapshots: one before and one after every apt run, pruned so the disk never fills.
 [ -e /etc/snapper/configs/root ] || run snapper -c root create-config /
+run_ok snapper -c root set-config NUMBER_CLEANUP=yes NUMBER_LIMIT=8 NUMBER_LIMIT_IMPORTANT=4
+run systemctl enable --now snapper-cleanup.timer
 write_file /etc/apt/apt.conf.d/80snapper 0644 <<'APT'
-DPkg::Pre-Invoke  { "snapper -c root create -t single -d 'apt-pre'  || true"; };
-DPkg::Post-Invoke { "snapper -c root create -t single -d 'apt-post' || true"; };
+DPkg::Pre-Invoke  { "snapper -c root create -t single --cleanup-algorithm number -d 'apt-pre' || true"; };
+DPkg::Post-Invoke { "snapper -c root create -t single --cleanup-algorithm number -d 'apt-post' || true"; };
 APT
 
 # Unattended security upgrades, nightly reboot at 04:00.
@@ -72,6 +75,19 @@ OnCalendar=*-*-* 04:00:00
 [Install]
 WantedBy=timers.target
 UNIT
+# Updates land at 03:00-03:30, before the 04:00 reboot, never while she is using Firefox.
+write_file /etc/systemd/system/apt-daily.timer.d/10-senior.conf 0644 <<'CONF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 03:00
+RandomizedDelaySec=0
+CONF
+write_file /etc/systemd/system/apt-daily-upgrade.timer.d/10-senior.conf 0644 <<'CONF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 03:30
+RandomizedDelaySec=0
+CONF
 run systemctl daemon-reload
 run systemctl enable --now nightly-reboot.timer
 log "done"

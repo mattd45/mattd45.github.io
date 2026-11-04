@@ -5,7 +5,6 @@ Needs GTK 3 and gtk-layer-shell; runs inside the locked-down sway session. Logic
 core.py and messages.py (tested off-device); this file only wires widgets to it.
 """
 import os
-import signal
 import subprocess
 import sys
 import urllib.parse
@@ -20,7 +19,7 @@ import gi  # noqa: E402
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GtkLayerShell", "0.1")
-from gi.repository import Gdk, GLib, Gtk, GtkLayerShell  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk, GtkLayerShell, Pango  # noqa: E402
 
 import core  # noqa: E402
 import messages  # noqa: E402
@@ -68,6 +67,7 @@ class Shell:
     def __init__(self):
         self.tiles = core.load_tiles(HERE / "tiles.json")
         self.debounce = core.ClickDebouncer()
+        self.confirm = core.DelayedConfirm()
         self.app = None
         self.seen_messages = set()
         self.active_alerts = set()
@@ -111,7 +111,7 @@ class Shell:
             button.connect("clicked", self._on_tile, tile)
             grid.attach(button, index % 3, index // 3, 1, 1)
         off = big_button("Turn off", "danger")
-        off.connect("clicked", lambda _b: self.stack.set_visible_child_name("turnoff"))
+        off.connect("clicked", lambda _b: self._on_turn_off())
         grid.attach(off, 2, 1, 1, 1)
         page.pack_start(grid, True, True, 0)
         self.stack.add_named(page, "home")
@@ -121,8 +121,9 @@ class Shell:
         page.pack_start(Gtk.Label(label=text("turn_off_confirm")), True, True, 0)
         keep = big_button(text("turn_off_no"), "danger")
         keep.connect("clicked", lambda _b: self.go_home())
+        self.keep_button = keep
         yes = big_button(text("turn_off_yes"), "danger")
-        yes.connect("clicked", lambda _b: subprocess.Popen(["systemctl", "poweroff"]))
+        yes.connect("clicked", lambda _b: self._power_off())
         page.pack_start(keep, False, False, 0)   # "Keep working" comes first and is the default
         page.pack_start(yes, False, False, 0)
         return page
@@ -130,7 +131,7 @@ class Shell:
     def _build_bar(self):
         self.bar = Gtk.Window()
         GtkLayerShell.init_for_window(self.bar)
-        GtkLayerShell.set_layer(self.bar, GtkLayerShell.Layer.TOP)
+        GtkLayerShell.set_layer(self.bar, GtkLayerShell.Layer.OVERLAY)   # stays visible over fullscreen Firefox
         for edge in (GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
             GtkLayerShell.set_anchor(self.bar, edge, True)
         GtkLayerShell.auto_exclusive_zone_enable(self.bar)
@@ -159,8 +160,22 @@ class Shell:
             self.go_home()
         return True
 
+    def _now_ms(self):
+        return GLib.get_monotonic_time() // 1000
+
     def _click_ok(self):
-        return self.debounce.accept(GLib.get_monotonic_time() // 1000)
+        return self.debounce.accept(self._now_ms())
+
+    def _on_turn_off(self):
+        if not self._click_ok():
+            return
+        self.confirm.shown(self._now_ms())
+        self.stack.set_visible_child_name("turnoff")
+        self.keep_button.grab_focus()                  # "Keep working" is the default
+
+    def _power_off(self):
+        if self.confirm.accept(self._now_ms()):        # ignore the second click of a double-click
+            subprocess.Popen(["systemctl", "poweroff"])
 
     def _on_tile(self, _button, tile):
         if not self._click_ok():
@@ -178,8 +193,7 @@ class Shell:
         self.main.hide()
 
     def _stop_app(self):
-        if self.app is not None and self.app.poll() is None:
-            self.app.send_signal(signal.SIGTERM)
+        core.stop_process(self.app)
         self.app = None
 
     def go_home(self):
@@ -198,15 +212,20 @@ class Shell:
 
     def show_downloads(self):
         page = self._page()
-        files = sorted(p for p in DOWNLOADS.glob("*") if p.is_file()) if DOWNLOADS.is_dir() else []
+        files = core.list_downloads(DOWNLOADS)
         if not files:
             page.pack_start(Gtk.Label(label=text("downloads_empty")), False, False, 0)
+        listing = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for path in files:
             button = big_button(path.name, "tile")
+            button.get_child().set_ellipsize(Pango.EllipsizeMode.MIDDLE)
             url = "file://" + urllib.parse.quote(str(path))
             button.connect("clicked", lambda _b, u=url: self.launch(
                 ["firefox-esr", "--no-remote", "--kiosk", "-P", "google", u]))
-            page.pack_start(button, False, False, 0)
+            listing.pack_start(button, False, False, 0)
+        scroller = Gtk.ScrolledWindow()
+        scroller.add(listing)
+        page.pack_start(scroller, True, True, 0)
         self._replace_page("downloads", page)
 
     def _replace_page(self, name, page):

@@ -1,5 +1,7 @@
 [Unit]
 Description=Download airlock (scan every download before delivery)
+StartLimitIntervalSec=300
+StartLimitBurst=5
 After=clamav-daemon.service
 Wants=clamav-daemon.service
 

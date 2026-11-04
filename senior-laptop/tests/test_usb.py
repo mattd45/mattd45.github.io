@@ -22,19 +22,26 @@ def tools():
     return importlib.import_module("usbguard_tools")
 
 
-def test_filter_keeps_mouse_keyboard_printer_and_hubs():
+def test_filter_keeps_mouse_keyboard_printer_and_hubs_without_port_pinning():
     out = tools().filter_rules("\n".join([MOUSE, KEYBOARD, PRINTER, HUB]))
-    assert out.splitlines() == [MOUSE, KEYBOARD, PRINTER, HUB]
+    lines = out.splitlines()
+    assert [ln.split()[2] for ln in lines] == ["046d:c077", "046d:c31c", "03f0:1d17", "1d6b:0002"]
+    assert "via-port" not in out and "parent-hash" not in out      # moving the mouse to another port is fine
+
+
+def test_filter_keeps_a_multifunction_printer_with_scanner_and_card_reader_interfaces():
+    mfp = PRINTER.replace("{ 07:01:02 07:01:02 }", "{ 07:01:02 ff:00:00 08:06:50 }")
+    assert "03f0:1d17" in tools().filter_rules(mfp)
 
 
 def test_filter_drops_webcam_storage_bluetooth_and_mixed_devices():
     out = tools().filter_rules("\n".join([MOUSE, WEBCAM, STICK, BLUETOOTH, MIXED]))
-    assert out.splitlines() == [MOUSE]
+    assert [ln.split()[2] for ln in out.splitlines()] == ["046d:c077"]
 
 
 def test_filter_ignores_comments_blank_and_non_allow_lines():
     text = "# generated\n\n" + MOUSE + "\nblock id 1:2 with-interface 03:01:01\n"
-    assert tools().filter_rules(text).splitlines() == [MOUSE]
+    assert [ln.split()[2] for ln in tools().filter_rules(text).splitlines()] == ["046d:c077"]
 
 
 def test_count_input_devices_counts_hid_rules():
@@ -64,10 +71,17 @@ def test_watcher_flags_a_blocked_input_device_once_fully_parsed():
     assert results[-1] is True and not any(results[:-1])
 
 
-def test_watcher_ignores_blocked_storage_allowed_devices_and_removals():
+def test_watcher_flags_any_blocked_device_but_not_allowed_ones_or_removals():
     t = tools()
-    for sample in (INSERT_BLOCKED_STORAGE, INSERT_ALLOWED_HID, REMOVE_HID):
+    assert feed(t.UsbWatchParser(), INSERT_BLOCKED_STORAGE)[-1] is True      # a replaced printer must show a message too
+    for sample in (INSERT_ALLOWED_HID, REMOVE_HID):
         assert not any(feed(t.UsbWatchParser(), sample)), sample
+
+
+def test_watcher_recognises_the_admin_allowing_a_device_so_the_message_can_clear():
+    p = tools().UsbWatchParser()
+    assert p.is_allow("[device] Allow: id=12") is True
+    assert p.is_allow("[device] PresenceChanged: id=12") is False
 
 
 def test_watcher_state_resets_between_events():

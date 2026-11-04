@@ -6,6 +6,13 @@ accounts.google.com
 docs.google.com
 drive.google.com
 apis.google.com
+accounts.youtube.com
+www.google.com
+consent.google.com
+myaccount.google.com
+ogs.google.com
+contacts.google.com
+gds.google.com
 *.gstatic.com
 *.googleusercontent.com
 *.googleapis.com
@@ -14,3 +21,4 @@ facebook.com
 *.facebook.com
 *.fbcdn.net
 *.facebook.net
+*.fbsbx.com

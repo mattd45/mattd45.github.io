@@ -162,3 +162,66 @@ def test_theme_meets_the_minimum_sizes():
     assert 40 in sizes or max(sizes) >= 40
     heights = [int(m) for m in re.findall(r"min-height:\s*(\d+)px", css)]
     assert heights and min(heights) >= 72, heights
+
+
+# ---- review fixes ----
+def test_turn_off_confirmation_ignores_clicks_until_it_has_been_on_screen_a_moment():
+    guard = mod("core").DelayedConfirm(delay_ms=1000)
+    assert guard.accept(0) is False                 # never shown
+    guard.shown(5000)
+    assert guard.accept(5300) is False              # the second click of a double-click
+    assert guard.accept(6100) is True
+
+
+class FakeProc:
+    def __init__(self, hang=False):
+        self.hang, self.calls, self._done = hang, [], False
+
+    def poll(self):
+        return 0 if self._done else None
+
+    def terminate(self):
+        self.calls.append("terminate")
+
+    def kill(self):
+        self.calls.append("kill"); self._done = True
+
+    def wait(self, timeout=None):
+        self.calls.append("wait")
+        if self.hang and not self._done:
+            import subprocess
+            raise subprocess.TimeoutExpired("fake", timeout)
+        self._done = True
+
+
+def test_stop_process_waits_for_a_graceful_exit_then_kills_if_it_hangs():
+    core = mod("core")
+    graceful = FakeProc()
+    core.stop_process(graceful, timeout=0.1)
+    assert graceful.calls == ["terminate", "wait"]
+    stuck = FakeProc(hang=True)
+    core.stop_process(stuck, timeout=0.1)
+    assert stuck.calls == ["terminate", "wait", "kill", "wait"]
+    core.stop_process(None)                          # nothing running: fine
+
+
+def test_downloads_list_is_newest_first_and_hides_dotfiles(tmp_path):
+    import os
+    core = mod("core")
+    for name, age in (("old.pdf", 300), ("new.pdf", 10), (".hidden.partial", 5)):
+        f = tmp_path / name; f.write_text("x")
+        os.utime(f, (f.stat().st_mtime - age, f.stat().st_mtime - age))
+    (tmp_path / "folder").mkdir()
+    assert [p.name for p in core.list_downloads(tmp_path)] == ["new.pdf", "old.pdf"]
+    assert core.list_downloads(tmp_path / "missing") == []
+
+
+def test_sway_restarts_the_shell_if_it_ever_exits():
+    text = (SHELL / "sway.conf").read_text()
+    exec_lines = [ln for ln in text.splitlines() if ln.strip().startswith("exec ")]
+    assert any("while" in ln and "shell.py" in ln for ln in exec_lines)
+
+
+def test_bottom_bar_is_drawn_above_fullscreen_browser_windows():
+    source = (SHELL / "shell.py").read_text()
+    assert "set_layer(self.bar, GtkLayerShell.Layer.OVERLAY)" in source

@@ -23,7 +23,16 @@ run install -m 0644 "$KIT/airlock/airlock.py" /opt/senior-laptop/airlock/airlock
 run install -m 0644 "$KIT/shell/copydeck.py" /opt/senior-laptop/shell/copydeck.py
 run install -m 0644 "$KIT/airlock/airlock.service" /etc/systemd/system/airlock.service
 
+# Large files must raise an alert instead of being passed as "clean".
+if [ "$DRY_RUN" = 1 ]; then
+  echo "+ clamd.conf AlertExceedsMax yes"
+elif grep -q '^AlertExceedsMax' /etc/clamav/clamd.conf; then
+  sed -i 's/^AlertExceedsMax.*/AlertExceedsMax yes/' /etc/clamav/clamd.conf
+else
+  echo 'AlertExceedsMax yes' >>/etc/clamav/clamd.conf
+fi
 run systemctl enable --now clamav-freshclam clamav-daemon
+run_ok systemctl restart clamav-daemon
 run systemctl daemon-reload
 run systemctl enable --now airlock.service
 

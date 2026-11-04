@@ -4,7 +4,7 @@
 set -eu
 systemctl is-active --quiet senior-laptop-heartbeat.timer
 [ -x /usr/local/bin/senior-laptop-alert ]
-[ "$(stat -c %a /etc/senior-laptop-monitor.env)" = 600 ]
+[ "$(stat -c %a /etc/senior-laptop-monitor.env)" = 640 ]
 # shellcheck source=/dev/null
 . /etc/senior-laptop-monitor.env
 [ -n "$HEALTHCHECK_URL" ]

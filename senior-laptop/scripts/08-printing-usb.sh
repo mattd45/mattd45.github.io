@@ -27,9 +27,9 @@ run lpoptions -d "$name"
 run install -d -m 0755 /opt/senior-laptop/scripts
 run install -m 0644 "$KIT/scripts/usbguard_tools.py" /opt/senior-laptop/scripts/usbguard_tools.py
 if [ "$DRY_RUN" = 1 ]; then
-  echo "+ usbguard generate-policy | usbguard_tools.py filter > /etc/usbguard/rules.conf"
+  echo "+ usbguard generate-policy -P | usbguard_tools.py filter > /etc/usbguard/rules.conf"
 else
-  rules="$(usbguard generate-policy | python3 "$KIT/scripts/usbguard_tools.py" filter)"
+  rules="$(usbguard generate-policy -P | python3 "$KIT/scripts/usbguard_tools.py" filter)"
   inputs="$(printf '%s\n' "$rules" | python3 "$KIT/scripts/usbguard_tools.py" count)"
   [ "$inputs" -ge 1 ] || { echo "No mouse or keyboard found among USB devices; plug them in first." >&2; exit 1; }
   printf '%s\n' "$rules" | write_file /etc/usbguard/rules.conf 0600

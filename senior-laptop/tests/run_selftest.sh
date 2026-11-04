@@ -23,5 +23,10 @@ out="$(CHECKS_DIR="$d" "$RUN" --only 01 2>&1)"; rc=$?
 [ $rc -eq 0 ] || { t "FAIL: --only 01 should exit 0"; fail=1; }
 grep -q '02-bad' <<<"$out" && { t "FAIL: --only 01 ran 02-bad"; fail=1; }
 
+out="$(CHECKS_DIR="$d" "$RUN" --only 01,02 2>&1)"
+if ! { grep -q 'PASS 01-good' <<<"$out" && grep -q 'FAIL 02-bad' <<<"$out"; }; then t "FAIL: --only 01,02 should run both"; fail=1; fi
+
+CHECKS_DIR="$d" "$RUN" --only 99 >/dev/null 2>&1 && { t "FAIL: --only with no matching check must not report success"; fail=1; }
+
 [ $fail -eq 0 ] && t "selftest OK"
 exit $fail

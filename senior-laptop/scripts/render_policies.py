@@ -68,6 +68,7 @@ def render_policies(allowlist: list[str]) -> dict:
         "UserMessaging": {"WhatsNew": False, "ExtensionRecommendations": False,
                           "FeatureRecommendations": False, "UrlbarInterventions": False,
                           "SkipOnboarding": True, "MoreFromMozilla": False},
+        "Handlers": {"mimeTypes": {"application/pdf": {"action": "saveToDisk"}}},
         "DownloadDirectory": QUARANTINE,
         "PromptForDownloadLocation": False,
         "Preferences": {
