@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# "I'm alive": ping the health-check every few minutes. Silence makes the service alert the admin.
+ENV_FILE="${SENIOR_MONITOR_ENV:-/etc/senior-laptop-monitor.env}"
+HEALTHCHECK_URL=""
+# shellcheck source=/dev/null
+[ -r "$ENV_FILE" ] && . "$ENV_FILE"
+[ -n "$HEALTHCHECK_URL" ] || exit 0
+exec curl -fsS -m 10 --retry 3 "$HEALTHCHECK_URL" >/dev/null

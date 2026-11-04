@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Tell the administrator something is wrong: logs it, and posts it to the health-check's /fail URL.
+# Never fails, so callers (the airlock, systemd OnFailure) are never broken by a missing network.
+# Usage: senior-laptop-alert "message"
+ENV_FILE="${SENIOR_MONITOR_ENV:-/etc/senior-laptop-monitor.env}"
+message="${1:-alert}"
+HEALTHCHECK_URL=""
+# shellcheck source=/dev/null
+[ -r "$ENV_FILE" ] && . "$ENV_FILE"
+
+command -v logger >/dev/null 2>&1 && logger -t senior-laptop-alert -- "$message"
+if [ -n "$HEALTHCHECK_URL" ]; then
+  curl -fsS -m 10 --retry 3 --data-raw "$message" "${HEALTHCHECK_URL}/fail" >/dev/null 2>&1 || true
+fi
+exit 0

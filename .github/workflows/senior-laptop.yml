@@ -11,8 +11,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: shellcheck
         run: shopt -s globstar nullglob; shellcheck -x senior-laptop/**/*.sh
-      - name: self-test
-        run: bash senior-laptop/tests/run_selftest.sh
+      - name: self-tests
+        run: |
+          bash senior-laptop/tests/run_selftest.sh
+          bash senior-laptop/tests/lib_selftest.sh
+          bash senior-laptop/tests/alert_selftest.sh
       - name: pytest
         run: |
           pip install pytest
