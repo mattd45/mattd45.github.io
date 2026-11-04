@@ -15,7 +15,7 @@ Design, provision and deploy a locked-down, single-purpose computing appliance f
 - The administrator can connect remotely after any reboot.
 - A bad update or breakage can be rolled back; the device can be rebuilt from a script in under an hour.
 - Her writing lives in Google Drive (Docs), so there is no local document store to lose.
-- She finds it easy and pleasant to use (validated with her).
+- She finds it easy and pleasant to use with no training: the usability targets U1-U7 in section 7.1 are met in a test with her.
 
 ## 2. Threat Model
 
@@ -36,6 +36,7 @@ Out of scope: a determined attacker with long-term physical access; targeted nat
 - **OS:** Debian stable, minimal desktop, Windows fully wiped.
 - **Accounts:** standard non-sudo `grandma`; separate `admin`.
 - **Apps:** Gmail and Google Docs (Firefox ESR kiosk window "Google"), Facebook (separate kiosk window and profile), Downloads folder, Print, Help. **No office suite installed** (removes macro and document-parser attack surface).
+- **100% custom UI** (boot splash, shell, Home, bottom bar, messages, print and turn-off flows) with a usability-first process (section 7).
 - **Browser allow-list**, uBlock Origin enforced, download scanning.
 - **Hardening layers:** per-app confinement, USBGuard, AppArmor, BIOS/Secure Boot/TPM disk encryption, kernel and mount hardening, btrfs snapshots with rollback, clean-slate-on-boot, hardening audit.
 - **Network:** restrictive firewall, filtering DNS, remote management via Tailscale (SSH) and RustDesk (screen).
@@ -59,7 +60,7 @@ Out of scope: a determined attacker with long-term physical access; targeted nat
 |                           Laptop (Debian)                         |
 |  +-----------------------------+   +---------------------------+  |
 |  | grandma (standard user)     |   | Hardened system layer     |  |
-|  |  - Home screen (launcher)   |   |  - ufw (restrictive)      |  |
+|  |  - Custom shell + Home      |   |  - ufw (restrictive)      |  |
 |  |  - Firefox ESR kiosk x2     |   |  - filtering DNS          |  |
 |  |    (Google | Facebook)      |   |  - AppArmor, USBGuard     |  |
 |  |    confined, uBlock locked  |   |  - kernel/mount hardening |  |
@@ -131,16 +132,55 @@ Out of scope: a determined attacker with long-term physical access; targeted nat
 - `lynis` and an OpenSCAP scan run during acceptance; target Lynis hardening index >= 80 and no unexplained high findings.
 - Attack-test from a separate machine (Kali live USB): `nmap` of the LAN address and tailnet address shows no open ports.
 
-## 7. UX Design
+## 7. Usability and Custom UI
 
-Calm, warm, high-contrast, large text, plain words.
-- **Home screen:** a custom full-screen launcher with 5 large tiles: Email, Facebook, Write a Letter (opens Google Docs), My Downloads, Help.
-- **One thing at a time:** apps open maximized; a permanent bottom bar shows Home, Print, Volume, Help. No window or tab management.
-- **Help:** shows {ADMIN_NAME}, {ADMIN_PHONE} and whether remote support is connected.
-- **Friendly failures:** blocked sites, scan results, offline state and printer faults use plain-language messages.
-- **Comfort:** large cursor and fonts, no lock screen, clear "Turn off" button. Mouse and keyboard only; no gestures, drag-and-drop or right-click required.
-- **Physical card** by the screen: "No one from Microsoft, Apple or your bank will ever call. Hang up and call {ADMIN_NAME}. If anything looks wrong, switch it off."
-- Custom code is limited to the Home screen and the airlock watcher.
+**Design goal: zero training.** She should sit down, see what to do, and succeed without being taught. Every design decision is judged by that. This section is a requirement, not decoration: the usability targets below are acceptance criteria.
+
+### 7.1 Usability targets (measurable)
+Core tasks: (1) read and reply to an email, (2) open Facebook and scroll/post, (3) write and save a letter in Google Docs, (4) print it, (5) open a downloaded file or attachment, (6) get help, (7) turn the machine off.
+
+| # | Target | How measured |
+|---|---|---|
+| U1 | She completes all seven core tasks unaided within 10 minutes of first sitting down, after at most **one sentence** of introduction plus the printed card. | Usability session (Task 10) |
+| U2 | At least 6 of 7 tasks succeed on the first attempt; the rest are recovered using Home/Help without the administrator. | Usability session |
+| U3 | Any core task starts within **2 clicks** of Home; Home is always **1 click** away. | Click-path review |
+| U4 | **No dead ends:** every screen has a visible way home; no screen requires keyboard shortcuts. | Screen inventory review |
+| U5 | No error codes, jargon or technical words in any message; shell text never below 28px, tile labels 40px. | Automated copy and theme tests |
+| U6 | Getting lost is cheap: the **Home** button returns to a clean state; after 10 minutes of inactivity the shell returns to Home. | Automated and manual test |
+| U7 | After handover: at most one support call a week by week 4. | Admin's log |
+
+### 7.2 Design principles
+- **One obvious next action per screen.** Never more than five choices at once.
+- **Words and pictures together.** Every button has a large icon and a plain-word label, in her words ("Write a Letter", not "Documents").
+- **Single click for everything.** Double-click is never required; a double-click habit must not trigger things twice.
+- **Nothing happens unasked.** No update prompts, restore-session dialogs, cookie banners or pop-ups. Anything the system must tell her appears as a large, calm message in the same place, in plain words, and dismisses itself after 10 seconds or on click.
+- **Always recoverable.** Irreversible actions (turn off, close all) ask once, in plain words, with a big "Keep working" option as the default.
+- **Orientation aids:** the date and time are always shown large on Home, with a greeting using her name.
+- **Predictable:** the same buttons are in the same places on every screen.
+- **Comfort:** large cursor, large text, high contrast (WCAG AAA 7:1), slow pointer acceleration, safe default volume, audible cue when a download is checked.
+- **Plain-language copy deck** held in one place (`shell/copy.py`); every message <= 15 words, no jargon.
+
+### 7.3 What "100% custom UI" means here
+Everything she sees outside the web pages themselves is purpose-built:
+- **Boot:** custom boot splash ("Starting up..."), hidden boot menu, no login screen, straight to Home.
+- **Shell:** a custom full-screen shell (a lightweight Wayland compositor locked down, plus our own GTK shell using layer-shell) that owns the whole screen. No stock desktop, panel, menus or window decorations exist.
+- **Home screen:** greeting with her name, large clock and date, five large tiles: Email, Facebook, Write a Letter, My Downloads, Help.
+- **Persistent bottom bar:** Back, Home, Print, Volume, Help. Always visible, large, never covered.
+- **Help screen:** {ADMIN_NAME} and {ADMIN_PHONE} in huge type, a "Call {ADMIN_NAME}" reminder, and a "Connected for support" indicator.
+- **Messages and dialogs:** custom large-type toasts and confirmations (downloads checked, printer needs paper, internet down, new device blocked, turn off).
+- **Print flow:** the bar's Print button opens a custom confirmation ("Print this page? Print / Cancel"), prints silently to the default printer, then shows "Sent to the printer."
+- **Turn off:** a single clear "Turn off" flow.
+- **Branded block page and error pages** in the same style.
+
+**Known limit:** the content of Gmail, Google Docs and Facebook pages is Google's and Facebook's, so it can't be fully redesigned. The shell frames them so she never sees the browser's own controls, and uBlock Origin's annoyance filter lists hide cookie banners. Making our own browser from a web-view component would be more "custom" but would drop uBlock Origin, lag behind Firefox on security fixes, and put new code in the web-facing path. We therefore use Firefox as an invisible engine inside our own shell. Optional later: a force-installed extension that hides clutter on Gmail (fragile; breaks when Google changes the page).
+
+### 7.4 Usability process
+1. **Observe first:** watch how she uses her current computer; list her real tasks and pain points; check vision, hearing and mouse control (font-size print samples at 24/28/36 pt, pointer speed, click accuracy, double-click habit).
+2. **UX spec:** `docs/ux-spec.md` holds the task list, screen inventory, design tokens (sizes, colours), copy deck and navigation rules.
+3. **Clickable prototype before coding the shell:** a mouse-only HTML prototype at real screen size, tested with her on the five core tasks, think-aloud, up to three rounds; the shell is not built until at least 4 of 5 tasks succeed unaided.
+4. **Build to the spec,** with automated tests for copy (no jargon, <= 15 words), theme (contrast >= 7:1, minimum sizes), double-click debounce and idle reset.
+5. **Acceptance session** against U1-U7, then a re-check after one week of real use.
+6. **One printed card** by the screen: three pictures, three lines, plus "No one from Microsoft, Apple or your bank will ever call. Hang up and call {ADMIN_NAME}. If anything looks wrong, switch it off."
 
 ## 8. Open-Source Components
 
@@ -165,13 +205,15 @@ Calm, warm, high-contrast, large text, plain words.
 - Snapshot rollback works; rebuild from scripts and image succeeds.
 - Reboot, then confirm remote SSH and screen access.
 - Lynis and nmap results meet 6.9.
-- 30-minute usability session with her; adjust layout and wording.
+- Usability session meets targets U1-U7 (section 7.1): all seven core tasks unaided within 10 minutes with one sentence of introduction.
 
 ## 10. Open Items / Placeholders
 - Confirm the laptop's spare RAM slot and Wi-Fi chip (Linux support) before or at purchase.
 - Printer make/model (USB).
 - {ADMIN_NAME} and {ADMIN_PHONE}.
-- Her vision/hearing needs; whether she uses the laptop screen or the existing monitor (and where the laptop sits).
+- Her vision/hearing/mouse-control needs (found in the observation step), her preferred name for the greeting, and whether she uses the laptop screen or the existing monitor (and where the laptop sits).
+- What the laptop does when the lid is closed.
+- sway vs labwc as the base compositor, and which window-closing shortcuts can be removed (Task 7 spike).
 - Whether TPM auto-unlock works on this laptop (else no disk encryption).
 - Flatpak vs AppArmor-confined Firefox (spike result).
 - Exact firewall rules and Gmail/Docs/Facebook domain list (derive in prototype).
