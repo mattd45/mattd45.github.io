@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Task 2: accounts, auto-login, quiet boot, snapshots, updates, nightly reboot.
 set -euo pipefail
-# shellcheck source=lib.sh
+# shellcheck source-path=SCRIPTDIR source=lib.sh
 . "$(dirname "$0")/lib.sh"
 require_root
 
